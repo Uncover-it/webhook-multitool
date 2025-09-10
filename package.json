@@ -31,7 +31,7 @@
     "eslint": "^9.34.0",
     "eslint-config-next": "^15.5.2",
     "knip": "^5.63.0",
-    "tailwindcss": "^4.1.12",
+    "tailwindcss": "^4.1.13",
     "tw-animate-css": "^1.3.7",
     "typescript": "^5.9.2"
   }
