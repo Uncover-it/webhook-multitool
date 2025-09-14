@@ -49,8 +49,8 @@ importers:
         specifier: ^4.1.12
         version: 4.1.12
       '@types/node':
-        specifier: ^24.3.0
-        version: 24.3.0
+        specifier: ^24.3.3
+        version: 24.3.3
       '@types/react':
         specifier: ^19.1.12
         version: 19.1.12
@@ -65,7 +65,7 @@ importers:
         version: 15.5.2(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
       knip:
         specifier: ^5.63.0
-        version: 5.63.0(@types/node@24.3.0)(typescript@5.9.2)
+        version: 5.63.0(@types/node@24.3.3)(typescript@5.9.2)
       tailwindcss:
         specifier: ^4.1.12
         version: 4.1.12
@@ -1282,8 +1282,8 @@ packages:
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
 
-  '@types/node@24.3.0':
-    resolution: {integrity: sha512-aPTXCrfwnDLj4VvXrm+UUCQjNEvJgNA8s5F1cvwQU+3KNltTOkBm1j30uNLyqqPNe7gE3KFzImYoZEfLhp4Yow==}
+  '@types/node@24.3.3':
+    resolution: {integrity: sha512-GKBNHjoNw3Kra1Qg5UXttsY5kiWMEfoHq2TmXb+b1rcm6N7B3wTrFYIf/oSZ1xNQ+hVVijgLkiDZh7jRRsh+Gw==}
 
   '@types/react-dom@19.1.8':
     resolution: {integrity: sha512-xG7xaBMJCpcK0RpN8jDbAACQo54ycO6h4dSSmgv8+fu6ZIAdANkx/WsawASUjVXYfy+J9AbUpRMNNEsXCDfDBQ==}
@@ -3952,7 +3952,7 @@ snapshots:
 
   '@types/json5@0.0.29': {}
 
-  '@types/node@24.3.0':
+  '@types/node@24.3.3':
     dependencies:
       undici-types: 7.10.0
 
@@ -4983,10 +4983,10 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  knip@5.63.0(@types/node@24.3.0)(typescript@5.9.2):
+  knip@5.63.0(@types/node@24.3.3)(typescript@5.9.2):
     dependencies:
       '@nodelib/fs.walk': 1.2.8
-      '@types/node': 24.3.0
+      '@types/node': 24.3.3
       fast-glob: 3.3.3
       formatly: 0.3.0
       jiti: 2.5.1
