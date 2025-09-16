@@ -10,25 +10,25 @@ git clone https://github.com/WarFiN123/webhook-multitool && cd webhook-multitool
 Then, install all dependencies:
 
 ```bash
-pnpm install
+bun install
 ```
 
 ## Running the development server (if you are editing the source code and want to see the changes real-time)
 
 ```bash
-pnpm run dev
+bun run dev
 ```
 
 ## Production Build (if you want to publish the site)
 
 Building:
 ```bash
-pnpm run build
+bun run build
 ```
 
 Running:
 ```bash
-pnpm run start
+bun run start
 ```
 
 ## Similar Projects
