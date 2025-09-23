@@ -47,6 +47,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import github from "@/../public/github.svg"
+import discord from "@/../public/discord.svg"
 
 interface WebhookEmbed {
   title?: string;
@@ -944,7 +946,7 @@ export default function WebhookTool() {
           className={buttonVariants({ variant: "outline", size: "icon" })}
         >
           <Image
-            src="/discord.svg"
+            src={discord}
             alt="Discord"
             width="19"
             height="19"
@@ -957,7 +959,7 @@ export default function WebhookTool() {
           className={buttonVariants({ variant: "outline", size: "icon" })}
         >
           <Image
-            src="/github.svg"
+            src={github}
             alt="GitHub"
             width="19"
             height="19"
