@@ -7,7 +7,8 @@ import { Grid } from "@/components/ui/grid";
 import Script from "next/script";
 
 export const metadata: Metadata = {
-  alternates: { canonical: "https://webhook.uncoverit.org" },
+  metadataBase: new URL("https://webhook.uncoverit.org"),
+  alternates: { canonical: "/" },
   title: {
     default: "Discord Webhook Multi-Tool",
     template: "Discord Webhook Multi-Tool",
@@ -58,13 +59,6 @@ export const metadata: Metadata = {
       "Take control of Discord webhooks online. Text-to-speech, spam messages, view webhook details, and delete unwanted webhooks easily with our multitool.",
     url: "https://webhook.uncoverit.org",
     siteName: "Discord Webhook Multi-Tool",
-    images: [
-      {
-        url: "https://webhook.uncoverit.org/og.png",
-        width: 1200,
-        height: 630,
-      },
-    ],
     locale: "en_US",
     type: "website",
   },
@@ -84,7 +78,6 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     description:
       "Take control of Discord webhooks online. Text-to-speech, spam messages, view webhook details, and delete unwanted webhooks easily with our multitool.",
-    images: ["https://webhook.uncoverit.org/og.png"],
   },
 };
 
