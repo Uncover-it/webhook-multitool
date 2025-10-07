@@ -27,7 +27,7 @@
     "@tailwindcss/postcss": "^4.1.14",
     "@types/node": "^24.6.2",
     "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react-dom": "^19.2.1",
     "eslint": "^9.37.0",
     "eslint-config-next": "^15.5.4",
     "knip": "^5.64.1",
