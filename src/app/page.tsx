@@ -107,9 +107,12 @@ export default function WebhookTool() {
   const spamRef = useRef<{ stop: boolean }>({ stop: false });
 
   const isValidWebhook = (url: string) => {
-    const regex =
-      /https:\/\/(?:canary\.)?(?:ptb\.)?discord(?:app)?\.com\/api\/webhooks\//;
-    return regex.test(url);
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   useEffect(() => {
@@ -165,7 +168,7 @@ export default function WebhookTool() {
   const editWebhook = async () => {
     if (!isValidWebhook(webhookUrl)) {
       toast.error("Error", {
-        description: "Please enter a valid Discord webhook URL",
+        description: "Please enter a valid webhook URL",
       });
       return;
     }
@@ -215,7 +218,7 @@ export default function WebhookTool() {
   const sendWebhook = async () => {
     if (!isValidWebhook(webhookUrl)) {
       toast.error("Error", {
-        description: "Please enter a valid Discord webhook URL",
+        description: "Please enter a valid webhook URL",
       });
       return;
     }
@@ -290,7 +293,7 @@ export default function WebhookTool() {
   const startSpam = async () => {
     if (!isValidWebhook(webhookUrl)) {
       toast.error("Error", {
-        description: "Please enter a valid Discord webhook URL",
+        description: "Please enter a valid webhook URL",
       });
       return;
     }
