@@ -106,15 +106,6 @@ export default function WebhookTool() {
   const [useSpam, setUseSpam] = useState(false);
   const spamRef = useRef<{ stop: boolean }>({ stop: false });
 
-  const isValidWebhook = (url: string) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   useEffect(() => {
     const saved = localStorage.getItem("savedWebhooks");
     if (saved) {
@@ -166,13 +157,6 @@ export default function WebhookTool() {
   };
 
   const editWebhook = async () => {
-    if (!isValidWebhook(webhookUrl)) {
-      toast.error("Error", {
-        description: "Please enter a valid webhook URL",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -216,13 +200,6 @@ export default function WebhookTool() {
   };
 
   const sendWebhook = async () => {
-    if (!isValidWebhook(webhookUrl)) {
-      toast.error("Error", {
-        description: "Please enter a valid webhook URL",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -291,13 +268,6 @@ export default function WebhookTool() {
   };
 
   const startSpam = async () => {
-    if (!isValidWebhook(webhookUrl)) {
-      toast.error("Error", {
-        description: "Please enter a valid webhook URL",
-      });
-      return;
-    }
-
     setIsSpamming(true);
     spamRef.current.stop = false;
     const payload: WebhookPayload = {};
