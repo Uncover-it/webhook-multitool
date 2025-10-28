@@ -158,7 +158,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
             <div className="grid grid-cols-6 gap-2">
               {discordColors.map((c, i) => (
                 <Button
-                  key={i}
+                  key={c}
                   variant="outline"
                   className="w-8 h-8 p-0 rounded-md border"
                   style={{ backgroundColor: c }}
