@@ -156,7 +156,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
 
             {/* Discord preset swatches */}
             <div className="grid grid-cols-6 gap-2">
-              {discordColors.map((c, i) => (
+              {discordColors.map((c) => (
                 <Button
                   key={c}
                   variant="outline"
