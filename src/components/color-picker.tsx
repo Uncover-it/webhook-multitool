@@ -94,7 +94,7 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
   }, [color]);
 
   /* --------------------------------------------------------------------- *
-   *  Click → sample colour from canvas
+   *  Click → sample color from canvas
    * --------------------------------------------------------------------- */
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
