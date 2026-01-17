@@ -104,6 +104,13 @@ export function WebhookHistory({ history }: WebhookHistoryProps) {
     window.location.reload();
   };
 
+  const deleteHistoryItem = (index: number) => {
+    const newHistory = [...history];
+    newHistory.splice(index, 1);
+    localStorage.setItem("webhookHistory", JSON.stringify(newHistory));
+    window.location.reload();
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -130,36 +137,48 @@ export function WebhookHistory({ history }: WebhookHistoryProps) {
             <div className="space-y-4">
               {history.map((item, index) => (
                 <Card key={index} className="border-muted">
-                  <CardHeader className="p-4 pb-2">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-sm font-medium">
-                        {formatDate(item.timestamp)}
-                      </CardTitle>
-                      <div className="flex gap-2">
+                  <CardHeader className="p-3 pb-2">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-sm font-medium leading-none mb-1.5">
+                          {formatDate(item.timestamp)}
+                        </CardTitle>
+                        <CardDescription className="truncate text-xs" title={item.webhookUrl}>
+                          {item.webhookUrl}
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-1.5 shrink-0">
                         <Button
                           variant="outline"
                           size="icon"
+                          className="h-7 w-7"
                           onClick={() => copyPayload(item.payload)}
                         >
-                          <Copy className="h-4 w-4" />
+                          <Copy className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="outline"
                           size="icon"
+                          className="h-7 w-7"
                           onClick={() =>
                             resendWebhook(index, item.webhookUrl, item.payload)
                           }
                           disabled={loading[index]}
                         >
-                          <Send className="h-4 w-4" />
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => deleteHistoryItem(index)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
-                    <CardDescription className="truncate text-xs">
-                      {item.webhookUrl}
-                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="p-4 pt-2">
+                  <CardContent className="p-3 pt-0">
                     <div className="bg-[#36393f] text-white rounded-md p-3">
                       {item.payload.username && (
                         <div className="flex items-center gap-2 mb-2">

@@ -27,6 +27,10 @@ import {
   Sun,
   CircleStop,
   Play,
+  Plus,
+  Paperclip,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -34,6 +38,7 @@ import { toast } from "sonner";
 import { ColorPicker } from "@/components/color-picker";
 import { WebhookHistory } from "@/components/webhook-history";
 import { EmbedPreview } from "@/components/embed-preview";
+import { PollPreview } from "@/components/poll-preview";
 import {
   Popover,
   PopoverContent,
@@ -47,8 +52,45 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import github from "@/../public/github.svg"
-import discord from "@/../public/discord.svg"
+import github from "@/../public/github.svg";
+import discord from "@/../public/discord.svg";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface EmbedState {
+  title: string;
+  description: string;
+  color: string;
+  author: string;
+  authorIcon: string;
+  footer: string;
+  footerIcon: string;
+  thumbnail: string;
+  image: string;
+  fields: { name: string; value: string; inline: boolean }[];
+  timestamp?: string;
+  url: string;
+}
+
+const initialEmbedState: EmbedState = {
+  title: "",
+  description: "",
+  color: "#5865F2",
+  author: "",
+  authorIcon: "",
+  footer: "",
+  footerIcon: "",
+  thumbnail: "",
+  image: "",
+  fields: [],
+  url: "",
+};
 
 interface WebhookEmbed {
   title?: string;
@@ -58,6 +100,9 @@ interface WebhookEmbed {
   footer?: { text: string; icon_url?: string };
   thumbnail?: { url: string };
   image?: { url: string };
+  fields?: { name: string; value: string; inline?: boolean }[];
+  timestamp?: string;
+  url?: string;
 }
 
 interface WebhookPayload {
@@ -66,6 +111,7 @@ interface WebhookPayload {
   content?: string;
   embeds?: WebhookEmbed[];
   tts?: boolean;
+  flags?: number;
 }
 
 interface WebhookHistoryItem {
@@ -87,19 +133,25 @@ export default function WebhookTool() {
   const [webhookName, setWebhookName] = useState("");
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [threadId, setThreadId] = useState("");
   const [content, setContent] = useState("");
-  const [embedTitle, setEmbedTitle] = useState("");
-  const [embedDescription, setEmbedDescription] = useState("");
-  const [embedColor, setEmbedColor] = useState("#5865F2");
-  const [embedAuthor, setEmbedAuthor] = useState("");
-  const [embedAuthorIcon, setEmbedAuthorIcon] = useState("");
-  const [embedFooter, setEmbedFooter] = useState("");
-  const [embedFooterIcon, setEmbedFooterIcon] = useState("");
-  const [embedThumbnail, setEmbedThumbnail] = useState("");
-  const [embedImage, setEmbedImage] = useState("");
+
+  const [embeds, setEmbeds] = useState<EmbedState[]>([initialEmbedState]);
+  const [activeEmbedIndex, setActiveEmbedIndex] = useState(0);
+
   const [useEmbed, setUseEmbed] = useState(false);
   const [useTTS, setUseTTS] = useState(false);
+  const [suppressEmbeds, setSuppressEmbeds] = useState(false);
+  const [silentMessage, setSilentMessage] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  const [usePoll, setUsePoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState("");
+  const [pollAnswers, setPollAnswers] = useState<
+    { text: string; emoji?: string }[]
+  >([{ text: "" }, { text: "" }]);
+  const [pollAllowMultiselect, setPollAllowMultiselect] = useState(false);
+  const [pollDuration, setPollDuration] = useState(24);
   const [history, setHistory] = useState<WebhookHistoryItem[]>([]);
   const [activeTab, setActiveTab] = useState("message");
   const [isSpamming, setIsSpamming] = useState(false);
@@ -203,41 +255,100 @@ export default function WebhookTool() {
     setLoading(true);
 
     try {
-      const payload: WebhookPayload = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload: WebhookPayload & { poll?: any } = {};
 
       if (username) payload.username = username;
       if (avatarUrl) payload.avatar_url = avatarUrl;
       if (content) payload.content = content;
 
+      let flags = 0;
+      if (suppressEmbeds) flags |= 1 << 2;
+      if (silentMessage) flags |= 1 << 12;
+      if (flags > 0) payload.flags = flags;
+
       if (useEmbed) {
-        const embed: WebhookEmbed = {};
-        if (embedTitle) embed.title = embedTitle;
-        if (embedDescription) embed.description = embedDescription;
-        if (embedColor)
-          embed.color = Number.parseInt(embedColor.replace("#", ""), 16);
+        payload.embeds = embeds.map((embedState) => {
+          const embed: WebhookEmbed = {};
+          if (embedState.title) embed.title = embedState.title;
+          if (embedState.description)
+            embed.description = embedState.description;
+          if (embedState.color)
+            embed.color = Number.parseInt(
+              embedState.color.replace("#", ""),
+              16,
+            );
 
-        if (embedAuthor) {
-          embed.author = { name: embedAuthor };
-          if (embedAuthorIcon) embed.author.icon_url = embedAuthorIcon;
-        }
+          if (embedState.author) {
+            embed.author = { name: embedState.author };
+            if (embedState.authorIcon)
+              embed.author.icon_url = embedState.authorIcon;
+          }
 
-        if (embedFooter) {
-          embed.footer = { text: embedFooter };
-          if (embedFooterIcon) embed.footer.icon_url = embedFooterIcon;
-        }
+          if (embedState.footer) {
+            embed.footer = { text: embedState.footer };
+            if (embedState.footerIcon)
+              embed.footer.icon_url = embedState.footerIcon;
+          }
 
-        if (embedThumbnail) embed.thumbnail = { url: embedThumbnail };
-        if (embedImage) embed.image = { url: embedImage };
+          if (embedState.thumbnail)
+            embed.thumbnail = { url: embedState.thumbnail };
+          if (embedState.image) embed.image = { url: embedState.image };
+          if (embedState.fields && embedState.fields.length > 0) {
+            embed.fields = embedState.fields;
+          }
+          if (embedState.timestamp) embed.timestamp = embedState.timestamp;
+          if (embedState.url) embed.url = embedState.url;
 
-        payload.embeds = [embed];
+          return embed;
+        });
       }
 
-      const response = await fetch(webhookUrl, {
+      if (usePoll) {
+        if (!pollQuestion.trim()) {
+          throw new Error("Poll question cannot be empty");
+        }
+        if (pollAnswers.some((a) => !a.text.trim())) {
+          throw new Error("All poll answers must have text");
+        }
+        if (pollAnswers.length < 2) {
+          throw new Error("Poll must have at least 2 answers");
+        }
+
+        payload.poll = {
+          question: { text: pollQuestion },
+          answers: pollAnswers.map((a) => ({ poll_media: { text: a.text } })),
+          allow_multiselect: pollAllowMultiselect,
+          duration: pollDuration,
+          layout_type: 1,
+        };
+      }
+
+      const finalPayload = useTTS ? { ...payload, tts: true } : payload;
+      let body: string | FormData = JSON.stringify(finalPayload);
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (files.length > 0) {
+        const formData = new FormData();
+        formData.append("payload_json", JSON.stringify(finalPayload));
+        files.forEach((file, index) => {
+          formData.append(`file${index}`, file);
+        });
+        body = formData;
+        delete headers["Content-Type"];
+      }
+
+      const url = new URL(webhookUrl);
+      if (threadId) {
+        url.searchParams.append("thread_id", threadId);
+      }
+
+      const response = await fetch(url.toString(), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(useTTS ? { ...payload, tts: true } : payload),
+        headers,
+        body,
       });
 
       if (!response.ok) {
@@ -270,28 +381,80 @@ export default function WebhookTool() {
   const startSpam = async () => {
     setIsSpamming(true);
     spamRef.current.stop = false;
-    const payload: WebhookPayload = {};
+    const payload: WebhookPayload & { poll?: any } = {};
     if (username) payload.username = username;
     if (avatarUrl) payload.avatar_url = avatarUrl;
     if (content) payload.content = content;
+
+    let flags = 0;
+    if (suppressEmbeds) flags |= 1 << 2;
+    if (silentMessage) flags |= 1 << 12;
+    if (flags > 0) payload.flags = flags;
+
     if (useEmbed) {
-      const embed: WebhookEmbed = {};
-      if (embedTitle) embed.title = embedTitle;
-      if (embedDescription) embed.description = embedDescription;
-      if (embedColor)
-        embed.color = Number.parseInt(embedColor.replace("#", ""), 16);
-      if (embedAuthor) {
-        embed.author = { name: embedAuthor };
-        if (embedAuthorIcon) embed.author.icon_url = embedAuthorIcon;
-      }
-      if (embedFooter) {
-        embed.footer = { text: embedFooter };
-        if (embedFooterIcon) embed.footer.icon_url = embedFooterIcon;
-      }
-      if (embedThumbnail) embed.thumbnail = { url: embedThumbnail };
-      if (embedImage) embed.image = { url: embedImage };
-      payload.embeds = [embed];
+      payload.embeds = embeds.map((embedState) => {
+        const embed: WebhookEmbed = {};
+        if (embedState.title) embed.title = embedState.title;
+        if (embedState.description) embed.description = embedState.description;
+        if (embedState.color)
+          embed.color = Number.parseInt(embedState.color.replace("#", ""), 16);
+        if (embedState.author) {
+          embed.author = { name: embedState.author };
+          if (embedState.authorIcon)
+            embed.author.icon_url = embedState.authorIcon;
+        }
+        if (embedState.footer) {
+          embed.footer = { text: embedState.footer };
+          if (embedState.footerIcon)
+            embed.footer.icon_url = embedState.footerIcon;
+        }
+        if (embedState.thumbnail)
+          embed.thumbnail = { url: embedState.thumbnail };
+        if (embedState.image) embed.image = { url: embedState.image };
+        if (embedState.fields && embedState.fields.length > 0) {
+          embed.fields = embedState.fields;
+        }
+        if (embedState.timestamp) embed.timestamp = embedState.timestamp;
+        if (embedState.url) embed.url = embedState.url;
+        return embed;
+      });
     }
+
+    if (usePoll) {
+      if (!pollQuestion.trim()) {
+        toast.error("Poll Error", {
+          description: "Poll question cannot be empty",
+        });
+        setIsSpamming(false);
+        spamRef.current.stop = true;
+        return;
+      }
+      if (pollAnswers.some((a) => !a.text.trim())) {
+        toast.error("Poll Error", {
+          description: "All poll answers must have text",
+        });
+        setIsSpamming(false);
+        spamRef.current.stop = true;
+        return;
+      }
+      if (pollAnswers.length < 2) {
+        toast.error("Poll Error", {
+          description: "Poll must have at least 2 answers",
+        });
+        setIsSpamming(false);
+        spamRef.current.stop = true;
+        return;
+      }
+
+      payload.poll = {
+        question: { text: pollQuestion },
+        answers: pollAnswers.map((a) => ({ poll_media: { text: a.text } })),
+        allow_multiselect: pollAllowMultiselect,
+        duration: pollDuration,
+        layout_type: 1,
+      };
+    }
+
     const spam = async () => {
       toast.info("Spamming started", {
         description: "Spamming the webhook.",
@@ -299,10 +462,32 @@ export default function WebhookTool() {
       while (!spamRef.current.stop) {
         let response: Response | undefined;
         try {
-          response = await fetch(webhookUrl, {
+          const url = new URL(webhookUrl);
+          if (threadId) {
+            url.searchParams.append("thread_id", threadId);
+          }
+
+          const finalPayload = useTTS ? { ...payload, tts: true } : payload;
+
+          let body: string | FormData = JSON.stringify(finalPayload);
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+          };
+
+          if (files.length > 0) {
+            const formData = new FormData();
+            formData.append("payload_json", JSON.stringify(finalPayload));
+            files.forEach((file, index) => {
+              formData.append(`file${index}`, file);
+            });
+            body = formData;
+            delete headers["Content-Type"];
+          }
+
+          response = await fetch(url.toString(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(useTTS ? { ...payload, tts: true } : payload),
+            headers,
+            body,
           });
 
           if (!response.ok) {
@@ -334,15 +519,93 @@ export default function WebhookTool() {
 
   const clearForm = () => {
     setContent("");
-    setEmbedTitle("");
-    setEmbedDescription("");
-    setEmbedColor("#5865F2");
-    setEmbedAuthor("");
-    setEmbedAuthorIcon("");
-    setEmbedFooter("");
-    setEmbedFooterIcon("");
-    setEmbedThumbnail("");
-    setEmbedImage("");
+    setEmbeds([initialEmbedState]);
+    setActiveEmbedIndex(0);
+    setUseEmbed(false);
+    setUseTTS(false);
+    setSuppressEmbeds(false);
+    setSilentMessage(false);
+    setFiles([]);
+    setUsePoll(false);
+    setPollQuestion("");
+    setPollAnswers([{ text: "" }, { text: "" }]);
+    setPollAllowMultiselect(false);
+    setPollDuration(24);
+  };
+
+  const updateEmbed = (index: number, field: keyof EmbedState, value: any) => {
+    const newEmbeds = [...embeds];
+    newEmbeds[index] = { ...newEmbeds[index], [field]: value };
+    setEmbeds(newEmbeds);
+  };
+
+  const addField = (embedIndex: number) => {
+    const newEmbeds = [...embeds];
+    if (newEmbeds[embedIndex].fields.length < 25) {
+      newEmbeds[embedIndex].fields.push({
+        name: "",
+        value: "",
+        inline: false,
+      });
+      setEmbeds(newEmbeds);
+    }
+  };
+
+  const removeField = (embedIndex: number, fieldIndex: number) => {
+    const newEmbeds = [...embeds];
+    newEmbeds[embedIndex].fields.splice(fieldIndex, 1);
+    setEmbeds(newEmbeds);
+  };
+
+  const updateField = (
+    embedIndex: number,
+    fieldIndex: number,
+    key: "name" | "value" | "inline",
+    value: any,
+  ) => {
+    const newEmbeds = [...embeds];
+    newEmbeds[embedIndex].fields[fieldIndex] = {
+      ...newEmbeds[embedIndex].fields[fieldIndex],
+      [key]: value,
+    };
+    setEmbeds(newEmbeds);
+  };
+
+  const addEmbed = () => {
+    if (embeds.length < 10) {
+      setEmbeds([...embeds, initialEmbedState]);
+      setActiveEmbedIndex(embeds.length);
+    }
+  };
+
+  const removeEmbed = (index: number) => {
+    if (embeds.length > 1) {
+      const newEmbeds = embeds.filter((_, i) => i !== index);
+      setEmbeds(newEmbeds);
+      if (activeEmbedIndex >= newEmbeds.length) {
+        setActiveEmbedIndex(newEmbeds.length - 1);
+      }
+    }
+  };
+
+  const addPollAnswer = () => {
+    if (pollAnswers.length < 10) {
+      setPollAnswers([...pollAnswers, { text: "" }]);
+    }
+  };
+
+  const removePollAnswer = (index: number) => {
+    if (pollAnswers.length > 1) {
+      const newAnswers = [...pollAnswers];
+      newAnswers.splice(index, 1);
+      setPollAnswers(newAnswers);
+    }
+  };
+
+  const updatePollAnswer = (index: number, text: string) => {
+    const newAnswers = [...pollAnswers];
+    newAnswers[index].text = text;
+    setPollAnswers(newAnswers);
   };
 
   return (
@@ -435,7 +698,7 @@ export default function WebhookTool() {
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-56 p-0">
-                          <div className="max-h-[300px] overflow-auto">
+                          <div className="max-h-75 overflow-auto">
                             {savedWebhooks.map((webhook, index) => (
                               <div
                                 key={index}
@@ -485,6 +748,19 @@ export default function WebhookTool() {
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="thread-id">Thread ID (optional)</Label>
+                <Input
+                  id="thread-id"
+                  placeholder="123456789012345678"
+                  value={threadId}
+                  onChange={(e) => setThreadId(e.target.value)}
+                  disabled={isSpamming}
+                />
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Send message into a specific thread (must be created first)
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -503,52 +779,306 @@ export default function WebhookTool() {
                     <Textarea
                       id="content"
                       placeholder="Enter your message here..."
-                      className="min-h-[100px]"
+                      className="min-h-25"
                       value={content}
                       onChange={(e) => setContent(e.target.value)}
                       disabled={isSpamming}
                     />
+
+                    <div className="space-y-2">
+                      <Label>Attachments</Label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {files.map((file, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm border"
+                          >
+                            <span className="truncate max-w-37.5">
+                              {file.name}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 rounded-full"
+                              onClick={() => {
+                                const newFiles = [...files];
+                                newFiles.splice(index, 1);
+                                setFiles(newFiles);
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            document.getElementById("file-upload")?.click()
+                          }
+                          disabled={isSpamming || files.length >= 10}
+                        >
+                          <Paperclip className="size-4 mr-2" />
+                          Add Files
+                        </Button>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              const newFiles = Array.from(e.target.files);
+                              if (files.length + newFiles.length > 10) {
+                                toast.error("Limit Exceeded", {
+                                  description:
+                                    "You can only attach up to 10 files.",
+                                });
+                                return;
+                              }
+                              setFiles([...files, ...newFiles]);
+                            }
+                            e.target.value = "";
+                          }}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Max 10 files, 25MB total (default Discord limit)
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="use-embed"
-                      checked={useEmbed}
-                      onCheckedChange={setUseEmbed}
-                      disabled={isSpamming}
-                    />
-                    <Label htmlFor="use-embed">Include Embed</Label>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="use-embed"
+                        checked={useEmbed}
+                        onCheckedChange={setUseEmbed}
+                        disabled={isSpamming}
+                      />
+                      <Label htmlFor="use-embed">Include Embed</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="use-poll"
+                        checked={usePoll}
+                        onCheckedChange={setUsePoll}
+                        disabled={isSpamming}
+                      />
+                      <Label htmlFor="use-poll">Poll</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="use-tts"
+                        checked={useTTS}
+                        onCheckedChange={setUseTTS}
+                        disabled={isSpamming}
+                      />
+                      <Label htmlFor="use-tts">TTS</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="suppress-embeds"
+                        checked={suppressEmbeds}
+                        onCheckedChange={setSuppressEmbeds}
+                        disabled={isSpamming || useEmbed}
+                      />
+                      <Label htmlFor="suppress-embeds">Hide Embeds</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="silent-message"
+                        checked={silentMessage}
+                        onCheckedChange={setSilentMessage}
+                        disabled={isSpamming}
+                      />
+                      <Label htmlFor="silent-message">Silent</Label>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="spam"
+                        checked={useSpam}
+                        onCheckedChange={setUseSpam}
+                        disabled={isSpamming}
+                      />
+                      <Label htmlFor="spam">Spam</Label>
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="use-tts"
-                      checked={useTTS}
-                      onCheckedChange={setUseTTS}
-                      disabled={isSpamming}
-                    />
-                    <Label htmlFor="use-tts">TTS</Label>
-                  </div>
+                  {usePoll && (
+                    <Card className="p-4 space-y-4">
+                      <div className="space-y-2">
+                        <Label>Poll Question</Label>
+                        <Input
+                          value={pollQuestion}
+                          onChange={(e) => setPollQuestion(e.target.value)}
+                          placeholder="What is your favorite color?"
+                          disabled={isSpamming}
+                        />
+                      </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="spam"
-                      checked={useSpam}
-                      onCheckedChange={setUseSpam}
-                      disabled={isSpamming}
-                    />
-                    <Label htmlFor="spam">Spam</Label>
-                  </div>
+                      <div className="space-y-2">
+                        <Label>Answers (Min 1, Max 10)</Label>
+                        {pollAnswers.map((answer, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input
+                              value={answer.text}
+                              onChange={(e) =>
+                                updatePollAnswer(index, e.target.value)
+                              }
+                              placeholder={`Option ${index + 1}`}
+                              disabled={isSpamming}
+                            />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => removePollAnswer(index)}
+                              disabled={pollAnswers.length <= 1 || isSpamming}
+                              className="h-10 w-10"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={addPollAnswer}
+                          disabled={pollAnswers.length >= 10 || isSpamming}
+                          className="w-full"
+                        >
+                          <Plus className="size-4 mr-2" /> Add Answer
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Switch
+                            id="poll-multiselect"
+                            checked={pollAllowMultiselect}
+                            onCheckedChange={setPollAllowMultiselect}
+                            disabled={isSpamming}
+                          />
+                          <Label htmlFor="poll-multiselect">
+                            Allow Multiple Answers
+                          </Label>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Duration</Label>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild disabled={isSpamming}>
+                              <Button
+                                variant="outline"
+                                className="w-35 h-8 justify-between"
+                                disabled={isSpamming}
+                              >
+                                {pollDuration === 1
+                                  ? "1 Hour"
+                                  : pollDuration === 4
+                                    ? "4 Hours"
+                                    : pollDuration === 8
+                                      ? "8 Hours"
+                                      : pollDuration === 24
+                                        ? "24 Hours"
+                                        : pollDuration === 72
+                                          ? "3 Days"
+                                          : "1 Week"}
+                                <ChevronDown className="h-4 w-4 opacity-50" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuRadioGroup
+                                value={pollDuration.toString()}
+                                onValueChange={(val) =>
+                                  setPollDuration(parseInt(val))
+                                }
+                              >
+                                <DropdownMenuRadioItem value="1">
+                                  1 Hour
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="4">
+                                  4 Hours
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="8">
+                                  8 Hours
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="24">
+                                  24 Hours
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="72">
+                                  3 Days
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="168">
+                                  1 Week
+                                </DropdownMenuRadioItem>
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
 
                   {useEmbed && (
                     <div className="space-y-4 pt-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-2 overflow-x-auto pb-2 max-w-[calc(100%-100px)]">
+                          {embeds.map((_, index) => (
+                            <Button
+                              key={index}
+                              variant={
+                                activeEmbedIndex === index
+                                  ? "default"
+                                  : "outline"
+                              }
+                              size="sm"
+                              onClick={() => setActiveEmbedIndex(index)}
+                              className="whitespace-nowrap"
+                            >
+                              Embed {index + 1}
+                            </Button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => removeEmbed(activeEmbedIndex)}
+                            disabled={embeds.length <= 1 || isSpamming}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={addEmbed}
+                            disabled={embeds.length >= 10 || isSpamming}
+                          >
+                            <Plus className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
                         <Label htmlFor="embed-title">Embed Title</Label>
                         <Input
                           id="embed-title"
                           placeholder="Embed Title"
-                          value={embedTitle}
-                          onChange={(e) => setEmbedTitle(e.target.value)}
+                          value={embeds[activeEmbedIndex].title}
+                          onChange={(e) =>
+                            updateEmbed(
+                              activeEmbedIndex,
+                              "title",
+                              e.target.value,
+                            )
+                          }
                           disabled={isSpamming}
                         />
                       </div>
@@ -560,9 +1090,15 @@ export default function WebhookTool() {
                         <Textarea
                           id="embed-description"
                           placeholder="Embed description..."
-                          className="min-h-[100px]"
-                          value={embedDescription}
-                          onChange={(e) => setEmbedDescription(e.target.value)}
+                          className="min-h-25"
+                          value={embeds[activeEmbedIndex].description}
+                          onChange={(e) =>
+                            updateEmbed(
+                              activeEmbedIndex,
+                              "description",
+                              e.target.value,
+                            )
+                          }
                           disabled={isSpamming}
                         />
                       </div>
@@ -570,8 +1106,10 @@ export default function WebhookTool() {
                       <div className="space-y-2">
                         <Label htmlFor="embed-color">Embed Color</Label>
                         <ColorPicker
-                          color={embedColor}
-                          onChange={setEmbedColor}
+                          color={embeds[activeEmbedIndex].color}
+                          onChange={(color) =>
+                            updateEmbed(activeEmbedIndex, "color", color)
+                          }
                         />
                       </div>
 
@@ -583,8 +1121,14 @@ export default function WebhookTool() {
                           <Input
                             id="embed-author"
                             placeholder="Author name"
-                            value={embedAuthor}
-                            onChange={(e) => setEmbedAuthor(e.target.value)}
+                            value={embeds[activeEmbedIndex].author}
+                            onChange={(e) =>
+                              updateEmbed(
+                                activeEmbedIndex,
+                                "author",
+                                e.target.value,
+                              )
+                            }
                             disabled={isSpamming}
                           />
                         </div>
@@ -595,8 +1139,14 @@ export default function WebhookTool() {
                           <Input
                             id="embed-author-icon"
                             placeholder="https://example.com/icon.png"
-                            value={embedAuthorIcon}
-                            onChange={(e) => setEmbedAuthorIcon(e.target.value)}
+                            value={embeds[activeEmbedIndex].authorIcon}
+                            onChange={(e) =>
+                              updateEmbed(
+                                activeEmbedIndex,
+                                "authorIcon",
+                                e.target.value,
+                              )
+                            }
                             disabled={isSpamming}
                           />
                         </div>
@@ -608,8 +1158,14 @@ export default function WebhookTool() {
                           <Input
                             id="embed-footer"
                             placeholder="Footer text"
-                            value={embedFooter}
-                            onChange={(e) => setEmbedFooter(e.target.value)}
+                            value={embeds[activeEmbedIndex].footer}
+                            onChange={(e) =>
+                              updateEmbed(
+                                activeEmbedIndex,
+                                "footer",
+                                e.target.value,
+                              )
+                            }
                             disabled={isSpamming}
                           />
                         </div>
@@ -620,8 +1176,14 @@ export default function WebhookTool() {
                           <Input
                             id="embed-footer-icon"
                             placeholder="https://example.com/icon.png"
-                            value={embedFooterIcon}
-                            onChange={(e) => setEmbedFooterIcon(e.target.value)}
+                            value={embeds[activeEmbedIndex].footerIcon}
+                            onChange={(e) =>
+                              updateEmbed(
+                                activeEmbedIndex,
+                                "footerIcon",
+                                e.target.value,
+                              )
+                            }
                             disabled={isSpamming}
                           />
                         </div>
@@ -633,8 +1195,14 @@ export default function WebhookTool() {
                           <Input
                             id="embed-thumbnail"
                             placeholder="https://example.com/thumbnail.png"
-                            value={embedThumbnail}
-                            onChange={(e) => setEmbedThumbnail(e.target.value)}
+                            value={embeds[activeEmbedIndex].thumbnail}
+                            onChange={(e) =>
+                              updateEmbed(
+                                activeEmbedIndex,
+                                "thumbnail",
+                                e.target.value,
+                              )
+                            }
                             disabled={isSpamming}
                           />
                         </div>
@@ -643,10 +1211,144 @@ export default function WebhookTool() {
                           <Input
                             id="embed-image"
                             placeholder="https://example.com/image.png"
-                            value={embedImage}
-                            onChange={(e) => setEmbedImage(e.target.value)}
+                            value={embeds[activeEmbedIndex].image}
+                            onChange={(e) =>
+                              updateEmbed(
+                                activeEmbedIndex,
+                                "image",
+                                e.target.value,
+                              )
+                            }
                             disabled={isSpamming}
                           />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="embed-timestamp"
+                          checked={!!embeds[activeEmbedIndex].timestamp}
+                          onCheckedChange={(checked) =>
+                            updateEmbed(
+                              activeEmbedIndex,
+                              "timestamp",
+                              checked ? new Date().toISOString() : undefined,
+                            )
+                          }
+                          disabled={isSpamming}
+                        />
+                        <Label htmlFor="embed-timestamp">
+                          Include Timestamp
+                        </Label>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Fields (Max 25)</Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => addField(activeEmbedIndex)}
+                            disabled={
+                              embeds[activeEmbedIndex].fields.length >= 25 ||
+                              isSpamming
+                            }
+                          >
+                            <Plus className="size-4 mr-1" /> Add Field
+                          </Button>
+                        </div>
+                        <div className="space-y-3">
+                          {embeds[activeEmbedIndex].fields.map(
+                            (field, index) => (
+                              <div
+                                key={index}
+                                className="border rounded-md p-3 space-y-3 relative"
+                              >
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-2 right-2 h-6 w-6"
+                                  onClick={() =>
+                                    removeField(activeEmbedIndex, index)
+                                  }
+                                  disabled={isSpamming}
+                                >
+                                  <Trash2 className="size-3" />
+                                </Button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <Label
+                                      htmlFor={`field-name-${index}`}
+                                      className="text-xs"
+                                    >
+                                      Name
+                                    </Label>
+                                    <Input
+                                      id={`field-name-${index}`}
+                                      placeholder="Field Name"
+                                      value={field.name}
+                                      onChange={(e) =>
+                                        updateField(
+                                          activeEmbedIndex,
+                                          index,
+                                          "name",
+                                          e.target.value,
+                                        )
+                                      }
+                                      disabled={isSpamming}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label
+                                      htmlFor={`field-value-${index}`}
+                                      className="text-xs"
+                                    >
+                                      Value
+                                    </Label>
+                                    <Input
+                                      id={`field-value-${index}`}
+                                      placeholder="Field Value"
+                                      value={field.value}
+                                      onChange={(e) =>
+                                        updateField(
+                                          activeEmbedIndex,
+                                          index,
+                                          "value",
+                                          e.target.value,
+                                        )
+                                      }
+                                      disabled={isSpamming}
+                                      className="h-8"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Switch
+                                    id={`field-inline-${index}`}
+                                    checked={field.inline}
+                                    onCheckedChange={(checked) =>
+                                      updateField(
+                                        activeEmbedIndex,
+                                        index,
+                                        "inline",
+                                        checked,
+                                      )
+                                    }
+                                    disabled={isSpamming}
+                                  />
+                                  <Label
+                                    htmlFor={`field-inline-${index}`}
+                                    className="text-xs"
+                                  >
+                                    Inline
+                                  </Label>
+                                </div>
+                              </div>
+                            ),
+                          )}
                         </div>
                       </div>
                     </div>
@@ -697,7 +1399,7 @@ export default function WebhookTool() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-[#36393f] text-white rounded-md p-4 min-h-[300px]">
+                  <div className="bg-[#36393f] text-white rounded-md p-4 min-h-75">
                     {username && (
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-600 flex items-center justify-center">
@@ -720,19 +1422,38 @@ export default function WebhookTool() {
                       </div>
                     )}
 
-                    {content && <p className="mb-2 break-words">{content}</p>}
+                    {content && (
+                      <p className="mb-2 wrap-break-words">{content}</p>
+                    )}
 
                     {useEmbed && (
-                      <EmbedPreview
-                        title={embedTitle}
-                        description={embedDescription}
-                        color={embedColor}
-                        author={embedAuthor}
-                        authorIcon={embedAuthorIcon}
-                        footer={embedFooter}
-                        footerIcon={embedFooterIcon}
-                        thumbnail={embedThumbnail}
-                        image={embedImage}
+                      <div className="space-y-4">
+                        {embeds.map((embed, index) => (
+                          <EmbedPreview
+                            key={index}
+                            title={embed.title}
+                            description={embed.description}
+                            color={embed.color}
+                            author={embed.author}
+                            authorIcon={embed.authorIcon}
+                            footer={embed.footer}
+                            footerIcon={embed.footerIcon}
+                            thumbnail={embed.thumbnail}
+                            image={embed.image}
+                            fields={embed.fields}
+                            timestamp={embed.timestamp}
+                            url={embed.url}
+                          />
+                        ))}
+                      </div>
+                    )}
+
+                    {usePoll && (
+                      <PollPreview
+                        question={pollQuestion}
+                        answers={pollAnswers}
+                        allowMultiselect={pollAllowMultiselect}
+                        duration={pollDuration}
                       />
                     )}
                   </div>
@@ -860,7 +1581,7 @@ export default function WebhookTool() {
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="font-medium">{webhook.name}</h4>
-                                <p className="text-sm text-muted-foreground truncate max-w-[300px]">
+                                <p className="text-sm text-muted-foreground truncate max-w-75">
                                   {webhook.url}
                                 </p>
                               </div>
