@@ -41,27 +41,39 @@ Go to **Workers & Pages** > **Create application** > **Pages** and connect your 
 
 Select **Next.js** as the framework preset. Ensure these values are set:
 
-* **Build command:** `npx @cloudflare/next-on-pages@1`
+* **Build command:**
+  ```bash
+  npx @cloudflare/next-on-pages@1```
 
-* **Build output directory:** `.vercel/output/static`
+* **Build output directory:**
+  ```bash
+  .vercel/output/static````
 
 ### 3. Environment Variables
 
 Under **Environment variables (advanced)**, add:
 
-* **Variable Name:** `NODE_VERSION`
+* **Variable Name:**
+  ```bash
+ NODE_VERSION```
 
-* **Value:** `20`
+* **Value:**
+```bash
+ 20```
 
 ### 4. Enable Compatibility (Crucial)
 
 After the first deployment starts/fails:
 
-1. Go to **Settings** > **Functions**.
+1. Go to **Settings** > **Runtime**.
 
-2. In **Compatibility flags**, add: `nodejs_compat`.
+2. In **Compatibility flags**, add:
+   ```bash
+   nodejs_compat
+   ```
 
-3. Go to **Deployments** and click **Retry deployment**. 
+4. Go to **Deployments** and click **Retry deployment**.
+   
 ## Similar Projects
 
 - [koalahook](https://github.com/infamouskoala/koalahook) by [infamouskoala](https://github.com/infamouskoala)
