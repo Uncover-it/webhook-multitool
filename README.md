@@ -43,7 +43,7 @@ Select **Next.js** as the framework preset. Ensure these values are set:
 
 * **Build command:**
   ```bash
-  npx @cloudflare/next-on-pages@1
+  bunx @cloudflare/next-on-pages@1
   ```
 
 * **Build output directory:**
