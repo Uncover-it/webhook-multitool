@@ -34,11 +34,11 @@ bun run start
 # Depoy To CloudFlare
   1. Go to CloudFlare page and strart from "Import an existing Git repository"
      
-  3. Select this Repository & Next:
+  3. Select this **Repository & Next**:
      
-     Project Name: <Optional>
+     **Project Name**: <Optional>
      
-     Production branch: main
+     **Production branch**: main
 
      
      *Build settings*
@@ -53,11 +53,11 @@ bun run start
      Environment variables (advanced)
      
        Add Variable
-     →
+     ̉
          Variable Name: `NODE_VERSION` = Value: `20`
-     *
+     ̉
     Click **Depoy**
-
+̉
     After depoy you need go to *Project Settings* and find *Runtime/Compatibility flags* and add `nodejs_compat`
 Then, go to Deployments and **Retry deployments**.
  
