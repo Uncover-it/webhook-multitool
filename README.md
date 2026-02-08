@@ -35,7 +35,7 @@ bun run start
 
 ### 1. Connect Git
 
-Go to **Workers & Pages** > **Create application** > **Pages** and connect your Git repository.
+Go to **Workers & Pages** > **Create application** > **Pages** and connect your Git repository (you may also paste in the link to this repository).
 
 ### 2. Build Settings
 
