@@ -43,24 +43,23 @@ Select **Next.js** as the framework preset. Ensure these values are set:
 
 * **Build command:**
   ```bash
-  npx @cloudflare/next-on-pages@1```
+  npx @cloudflare/next-on-pages@1
+  ```
 
 * **Build output directory:**
   ```bash
-  .vercel/output/static````
+  .vercel/output/static
+  ```
 
 ### 3. Environment Variables
 
 Under **Environment variables (advanced)**, add:
+  
+|Variable Name| Value
+|-------|-------|
+|NODE_VERSION| 20
 
-* **Variable Name:**
-  ```bash
- NODE_VERSION```
-
-* **Value:**
-```bash
- 20```
-
+**Deploy**
 ### 4. Enable Compatibility (Crucial)
 
 After the first deployment starts/fails:
