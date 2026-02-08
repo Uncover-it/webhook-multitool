@@ -31,36 +31,37 @@ Running:
 bun run start
 ```
 
-# Depoy To CloudFlare
-  1. Go to CloudFlare page and strart from "Import an existing Git repository"
-     
-  3. Select this **Repository & Next**:
-     
-     **Project Name**: <Optional>
-     
-     **Production branch**: main
+# Deploy to Cloudflare Pages
 
-     
-     *Build settings*
-     
-     Framework preset: `Next.js`
-     
-       Build command(Will be automatically entered): `npx @cloudflare/next-on-pages@1`
-     
-       Build output directory(Will be automatically entered): /`.vercel/output/static`
+### 1. Connect Git
 
-     
-     Environment variables (advanced)
-     
-       Add Variable
-     ̉
-         Variable Name: `NODE_VERSION` = Value: `20`
-     ̉
-    Click **Depoy**
-̉
-    After depoy you need go to *Project Settings* and find *Runtime/Compatibility flags* and add `nodejs_compat`
-Then, go to Deployments and **Retry deployments**.
- 
+Go to **Workers & Pages** > **Create application** > **Pages** and connect your Git repository.
+
+### 2. Build Settings
+
+Select **Next.js** as the framework preset. Ensure these values are set:
+
+* **Build command:** `npx @cloudflare/next-on-pages@1`
+
+* **Build output directory:** `.vercel/output/static`
+
+### 3. Environment Variables
+
+Under **Environment variables (advanced)**, add:
+
+* **Variable Name:** `NODE_VERSION`
+
+* **Value:** `20`
+
+### 4. Enable Compatibility (Crucial)
+
+After the first deployment starts/fails:
+
+1. Go to **Settings** > **Functions**.
+
+2. In **Compatibility flags**, add: `nodejs_compat`.
+
+3. Go to **Deployments** and click **Retry deployment**. 
 ## Similar Projects
 
 - [koalahook](https://github.com/infamouskoala/koalahook) by [infamouskoala](https://github.com/infamouskoala)
