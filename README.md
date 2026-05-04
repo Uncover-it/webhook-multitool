@@ -4,7 +4,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 First, clone the repository:
 
 ```bash
-git clone https://github.com/WarFiN123/webhook-multitool && cd webhook-multitool
+git clone https://github.com/Uncover-it/webhook-multitool && cd webhook-multitool
 ```
 
 Then, install all dependencies:
