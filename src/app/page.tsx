@@ -54,6 +54,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import github from "@/../public/github.svg";
 import discord from "@/../public/discord.svg";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 import {
   DropdownMenu,
@@ -677,40 +687,79 @@ export default function WebhookTool() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
-                          aria-label="Delete Webhook"
-                          variant="destructive"
-                          size="icon"
-                          {...(webhookUrl ? {} : { disabled: true })}
-                          onClick={async () => {
-                            if (!webhookUrl) return;
-                            try {
-                              const response = await fetch(webhookUrl, {
-                                method: "DELETE",
-                              });
-                              if (response.ok) {
-                                setWebhookUrl("");
-                                toast.success("Webhook deleted", {
-                                  description:
-                                    "The webhook has been deleted from Discord.",
-                                });
-                              } else {
-                                toast.error("Failed to delete webhook", {
-                                  description: `Error: ${response.status} ${response.statusText}`,
-                                });
-                              }
-                            } catch (error) {
-                              toast.error("Error deleting webhook", {
-                                description:
-                                  error instanceof Error
-                                    ? error.message
-                                    : "Unknown error occurred",
-                              });
-                            }
-                          }}
-                        >
-                          <Trash2 />
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger>
+                            <Button
+                              aria-label="Delete Webhook"
+                              variant="destructive"
+                              size="icon"
+                              {...(webhookUrl ? {} : { disabled: true })}
+                            >
+                              <Trash2 />
+                            </Button>
+                          </DialogTrigger>{" "}
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>
+                                Are you absolutely sure?
+                              </DialogTitle>
+                              <DialogDescription>
+                                This action cannot be undone. This will
+                                permanently delete your account and remove your
+                                data from our servers.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button
+                                  type="button"
+                                  size={"sm"}
+                                  className="rounded-lg"
+                                >
+                                  Close
+                                </Button>
+                              </DialogClose>
+                              <DialogClose asChild>
+                                <Button
+                                  variant={"destructive"}
+                                  size={"sm"}
+                                  className="rounded-lg"
+                                  onClick={async () => {
+                                    if (!webhookUrl) return;
+                                    try {
+                                      const response = await fetch(webhookUrl, {
+                                        method: "DELETE",
+                                      });
+                                      if (response.ok) {
+                                        setWebhookUrl("");
+                                        toast.success("Webhook deleted", {
+                                          description:
+                                            "The webhook has been deleted from Discord.",
+                                        });
+                                      } else {
+                                        toast.error(
+                                          "Failed to delete webhook",
+                                          {
+                                            description: `Error: ${response.status} ${response.statusText}`,
+                                          },
+                                        );
+                                      }
+                                    } catch (error) {
+                                      toast.error("Error deleting webhook", {
+                                        description:
+                                          error instanceof Error
+                                            ? error.message
+                                            : "Unknown error occurred",
+                                      });
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </DialogClose>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>Delete Webhook</p>
