@@ -163,12 +163,20 @@ export default function WebhookTool() {
   useEffect(() => {
     const saved = localStorage.getItem("savedWebhooks");
     if (saved) {
-      setSavedWebhooks(JSON.parse(saved));
+      try {
+        setSavedWebhooks(JSON.parse(saved));
+      } catch {
+        localStorage.removeItem("savedWebhooks");
+      }
     }
 
     const historyData = localStorage.getItem("webhookHistory");
     if (historyData) {
-      setHistory(JSON.parse(historyData));
+      try {
+        setHistory(JSON.parse(historyData));
+      } catch {
+        localStorage.removeItem("webhookHistory");
+      }
     }
   }, []);
 
