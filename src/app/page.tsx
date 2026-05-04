@@ -1448,7 +1448,14 @@ export default function WebhookTool() {
                     ) : (
                       <Button
                         onClick={startSpam}
-                        disabled={loading || !webhookUrl || !content}
+                        disabled={
+                          loading ||
+                          !webhookUrl ||
+                          (!content &&
+                            !useEmbed &&
+                            !usePoll &&
+                            files.length === 0)
+                        }
                       >
                         <Play className="size-4" />
                         Start Spam
@@ -1457,7 +1464,14 @@ export default function WebhookTool() {
                   ) : (
                     <Button
                       onClick={sendWebhook}
-                      disabled={loading || !webhookUrl || !content}
+                      disabled={
+                        loading ||
+                        !webhookUrl ||
+                        (!content &&
+                          !useEmbed &&
+                          !usePoll &&
+                          files.length === 0)
+                      }
                     >
                       <Send className="size-4" />
                       {loading ? "Sending..." : "Send Webhook"}
