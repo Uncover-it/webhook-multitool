@@ -63,6 +63,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface EmbedField {
+  name: string;
+  value: string;
+  inline: boolean;
+}
+
 interface EmbedState {
   title: string;
   description: string;
@@ -73,7 +79,7 @@ interface EmbedState {
   footerIcon: string;
   thumbnail: string;
   image: string;
-  fields: { name: string; value: string; inline: boolean }[];
+  fields: EmbedField[];
   timestamp?: string;
   url: string;
 }
@@ -391,6 +397,7 @@ export default function WebhookTool() {
   const startSpam = async () => {
     setIsSpamming(true);
     spamRef.current.stop = false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: WebhookPayload & { poll?: any } = {};
     if (username) payload.username = username;
     if (avatarUrl) payload.avatar_url = avatarUrl;
@@ -543,7 +550,11 @@ export default function WebhookTool() {
     setPollDuration(24);
   };
 
-  const updateEmbed = (index: number, field: keyof EmbedState, value: any) => {
+  const updateEmbed = <K extends keyof EmbedState>(
+    index: number,
+    field: K,
+    value: EmbedState[K],
+  ) => {
     const newEmbeds = [...embeds];
     newEmbeds[index] = { ...newEmbeds[index], [field]: value };
     setEmbeds(newEmbeds);
@@ -571,11 +582,11 @@ export default function WebhookTool() {
     setEmbeds(newEmbeds);
   };
 
-  const updateField = (
+  const updateField = <K extends keyof EmbedField>(
     embedIndex: number,
     fieldIndex: number,
-    key: "name" | "value" | "inline",
-    value: any,
+    key: K,
+    value: EmbedField[K],
   ) => {
     const embed = embeds[embedIndex];
     const newEmbeds = [...embeds];
