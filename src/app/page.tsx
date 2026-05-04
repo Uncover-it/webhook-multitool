@@ -493,6 +493,18 @@ export default function WebhookTool() {
           });
 
           if (!response.ok) {
+            if (response.status === 429) {
+              const data = await response
+                .json()
+                .catch(() => ({} as { retry_after?: number }));
+              const headerRetry = response.headers.get("retry-after");
+              const wait = Math.max(
+                Number(data?.retry_after ?? headerRetry ?? 1),
+                0.1,
+              );
+              await new Promise((r) => setTimeout(r, wait * 1000));
+              continue;
+            }
             const error = await response.json();
             throw new Error(error.message);
           }
