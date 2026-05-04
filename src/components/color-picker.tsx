@@ -101,8 +101,16 @@ export function ColorPicker({ color, onChange }: ColorPickerProps) {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = Math.min(Math.max(0, e.clientX - rect.left), canvas.width - 1);
-    const y = Math.min(Math.max(0, e.clientY - rect.top), canvas.height - 1);
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = Math.min(
+      Math.max(0, (e.clientX - rect.left) * scaleX),
+      canvas.width - 1,
+    );
+    const y = Math.min(
+      Math.max(0, (e.clientY - rect.top) * scaleY),
+      canvas.height - 1,
+    );
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
