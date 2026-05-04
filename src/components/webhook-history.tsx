@@ -41,9 +41,10 @@ interface WebhookHistoryItem {
 
 interface WebhookHistoryProps {
   history: WebhookHistoryItem[];
+  setHistory: (history: WebhookHistoryItem[]) => void;
 }
 
-export function WebhookHistory({ history }: WebhookHistoryProps) {
+export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
   const [loading, setLoading] = useState<Record<number, boolean>>({});
 
   const formatDate = (dateString: string) => {
@@ -101,14 +102,13 @@ export function WebhookHistory({ history }: WebhookHistoryProps) {
 
   const clearHistory = () => {
     localStorage.removeItem("webhookHistory");
-    window.location.reload();
+    setHistory([]);
   };
 
   const deleteHistoryItem = (index: number) => {
-    const newHistory = [...history];
-    newHistory.splice(index, 1);
+    const newHistory = history.filter((_, i) => i !== index);
     localStorage.setItem("webhookHistory", JSON.stringify(newHistory));
-    window.location.reload();
+    setHistory(newHistory);
   };
 
   return (
