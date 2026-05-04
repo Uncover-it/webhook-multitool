@@ -665,6 +665,13 @@ export default function WebhookTool() {
                           {...(webhookUrl ? {} : { disabled: true })}
                           onClick={async () => {
                             if (!webhookUrl) return;
+                            if (
+                              !window.confirm(
+                                "Permanently delete this webhook on Discord? This cannot be undone.",
+                              )
+                            ) {
+                              return;
+                            }
                             try {
                               const response = await fetch(webhookUrl, {
                                 method: "DELETE",
