@@ -187,6 +187,8 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
                               <Image
                                 src={item.payload.avatar_url}
                                 alt="Avatar"
+                                width={24}
+                                height={24}
                                 className="w-full h-full object-cover"
                               />
                             </div>
