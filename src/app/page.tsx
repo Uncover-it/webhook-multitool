@@ -1647,7 +1647,7 @@ export default function WebhookTool() {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4 mt-4">
-          <WebhookHistory history={history} />
+          <WebhookHistory history={history} setHistory={setHistory} />
         </TabsContent>
       </Tabs>
       <footer className="mt-8 text-right flex justify-end gap-2">
