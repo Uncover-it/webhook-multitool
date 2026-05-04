@@ -92,6 +92,8 @@ const initialEmbedState: EmbedState = {
   url: "",
 };
 
+const makeEmbed = (): EmbedState => ({ ...initialEmbedState, fields: [] });
+
 interface WebhookEmbed {
   title?: string;
   description?: string;
@@ -136,7 +138,7 @@ export default function WebhookTool() {
   const [threadId, setThreadId] = useState("");
   const [content, setContent] = useState("");
 
-  const [embeds, setEmbeds] = useState<EmbedState[]>([initialEmbedState]);
+  const [embeds, setEmbeds] = useState<EmbedState[]>([makeEmbed()]);
   const [activeEmbedIndex, setActiveEmbedIndex] = useState(0);
 
   const [useEmbed, setUseEmbed] = useState(false);
@@ -519,7 +521,7 @@ export default function WebhookTool() {
 
   const clearForm = () => {
     setContent("");
-    setEmbeds([initialEmbedState]);
+    setEmbeds([makeEmbed()]);
     setActiveEmbedIndex(0);
     setUseEmbed(false);
     setUseTTS(false);
@@ -540,20 +542,24 @@ export default function WebhookTool() {
   };
 
   const addField = (embedIndex: number) => {
-    const newEmbeds = [...embeds];
-    if (newEmbeds[embedIndex].fields.length < 25) {
-      newEmbeds[embedIndex].fields.push({
-        name: "",
-        value: "",
-        inline: false,
-      });
+    const embed = embeds[embedIndex];
+    if (embed.fields.length < 25) {
+      const newEmbeds = [...embeds];
+      newEmbeds[embedIndex] = {
+        ...embed,
+        fields: [...embed.fields, { name: "", value: "", inline: false }],
+      };
       setEmbeds(newEmbeds);
     }
   };
 
   const removeField = (embedIndex: number, fieldIndex: number) => {
+    const embed = embeds[embedIndex];
     const newEmbeds = [...embeds];
-    newEmbeds[embedIndex].fields.splice(fieldIndex, 1);
+    newEmbeds[embedIndex] = {
+      ...embed,
+      fields: embed.fields.filter((_, i) => i !== fieldIndex),
+    };
     setEmbeds(newEmbeds);
   };
 
@@ -563,17 +569,20 @@ export default function WebhookTool() {
     key: "name" | "value" | "inline",
     value: any,
   ) => {
+    const embed = embeds[embedIndex];
     const newEmbeds = [...embeds];
-    newEmbeds[embedIndex].fields[fieldIndex] = {
-      ...newEmbeds[embedIndex].fields[fieldIndex],
-      [key]: value,
+    newEmbeds[embedIndex] = {
+      ...embed,
+      fields: embed.fields.map((f, i) =>
+        i === fieldIndex ? { ...f, [key]: value } : f,
+      ),
     };
     setEmbeds(newEmbeds);
   };
 
   const addEmbed = () => {
     if (embeds.length < 10) {
-      setEmbeds([...embeds, initialEmbedState]);
+      setEmbeds([...embeds, makeEmbed()]);
       setActiveEmbedIndex(embeds.length);
     }
   };
