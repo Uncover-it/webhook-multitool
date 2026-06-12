@@ -59,11 +59,19 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
     }).format(date);
   };
 
-  const copyPayload = (payload: WebhookPayload) => {
-    navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-    toast.info("Copied", {
-      description: "Webhook payload copied to clipboard",
-    });
+  const copyPayload = async (payload: WebhookPayload) => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      toast.info("Copied", {
+        description: "Webhook payload copied to clipboard",
+      });
+    } catch (error) {
+      console.error("Error copying payload:", error);
+      toast.error("Copy failed", {
+        description:
+          error instanceof Error ? error.message : "Unable to copy payload",
+      });
+    }
   };
 
   const resendWebhook = async (
