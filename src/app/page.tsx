@@ -705,8 +705,9 @@ export default function WebhookTool() {
                               </DialogTitle>
                               <DialogDescription>
                                 This action cannot be undone. This will
-                                permanently delete your account and remove your
-                                data from our servers.
+                                permanently delete the webhook from Discord and
+                                prevent any futher messages from being sent to
+                                it.
                               </DialogDescription>
                             </DialogHeader>
                             <DialogFooter>
@@ -1002,7 +1003,7 @@ export default function WebhookTool() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Answers (Min 1, Max 10)</Label>
+                        <Label>Answers (Min 2, Max 10)</Label>
                         {pollAnswers.map((answer, index) => (
                           <div key={index} className="flex gap-2">
                             <Input
