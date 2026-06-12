@@ -69,7 +69,7 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
   const resendWebhook = async (
     index: number,
     webhookUrl: string,
-    payload: WebhookPayload
+    payload: WebhookPayload,
   ) => {
     setLoading((prev) => ({ ...prev, [index]: true }));
 
@@ -130,7 +130,7 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
       <CardContent>
         {history.length === 0 ? (
           <p className="text-muted-foreground">
-            No webhook history yet. Send a webhook to see it here.
+            No webhook history yet. Send a message to see it here.
           </p>
         ) : (
           <ScrollArea className="h-[600px]">
@@ -143,7 +143,10 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
                         <CardTitle className="text-sm font-medium leading-none mb-1.5">
                           {formatDate(item.timestamp)}
                         </CardTitle>
-                        <CardDescription className="truncate text-xs" title={item.webhookUrl}>
+                        <CardDescription
+                          className="truncate text-xs"
+                          title={item.webhookUrl}
+                        >
                           {item.webhookUrl}
                         </CardDescription>
                       </div>
@@ -230,7 +233,7 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
                                   thumbnail={embed.thumbnail?.url}
                                   image={embed.image?.url}
                                 />
-                              )
+                              ),
                             )}
                           </div>
                         )}

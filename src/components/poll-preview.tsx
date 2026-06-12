@@ -23,11 +23,11 @@ export function PollPreview({
             className="flex items-center gap-3 p-3 bg-[#202225] rounded-md border border-transparent hover:border-gray-600 transition-colors"
           >
             {allowMultiselect ? (
-              <div className="w-5 h-5 border-2 border-[#b9bbbe] rounded-[4px]" />
+              <div className="w-5 h-5 border-2 border-[#b9bbbe] rounded-lg" />
             ) : (
               <div className="w-5 h-5 border-2 border-[#b9bbbe] rounded-full" />
             )}
-            <span className="text-sm text-gray-200 font-medium break-words">
+            <span className="text-sm text-gray-200 font-medium wrap-break-word">
               {answer.text || `Answer ${index + 1}`}
             </span>
           </div>
