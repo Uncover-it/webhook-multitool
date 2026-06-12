@@ -193,6 +193,7 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
                                 width={24}
                                 height={24}
                                 className="w-full h-full object-cover"
+                                unoptimized={true}
                               />
                             </div>
                           ) : (
