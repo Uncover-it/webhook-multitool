@@ -107,7 +107,17 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
 
   const deleteHistoryItem = (index: number) => {
     const newHistory = history.filter((_, i) => i !== index);
-    localStorage.setItem("webhookHistory", JSON.stringify(newHistory));
+
+    try {
+      localStorage.setItem("webhookHistory", JSON.stringify(newHistory));
+    } catch (error) {
+      console.error("Error saving webhook history:", error);
+      toast.error("Failed to update saved history", {
+        description:
+          "The item was removed from the current view, but saving to local storage failed.",
+      });
+    }
+
     setHistory(newHistory);
   };
 
