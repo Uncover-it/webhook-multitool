@@ -1754,7 +1754,7 @@ export default function WebhookTool() {
         </Link>
         <Button
           variant="outline"
-          size="sm"
+          size="icon"
           onClick={() =>
             theme === "light" ? setTheme("dark") : setTheme("light")
           }
