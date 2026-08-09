@@ -38,7 +38,13 @@ export function EmbedPreview({
         {author && (
           <div className="flex items-center gap-2 mb-2">
             {authorIcon && (
-              <Image src={authorIcon} alt="" className="rounded-full w-6 h-6 object-cover" height={24} width={24}/>
+              <Image
+                src={authorIcon}
+                alt=""
+                className="rounded-full w-6 h-6 object-cover"
+                height={24}
+                width={24}
+              />
             )}
             <span className="text-sm font-medium">{author}</span>
           </div>
@@ -63,9 +69,7 @@ export function EmbedPreview({
               </div>
             )}
             {description && (
-              <div
-                className="text-sm text-gray-300 whitespace-pre-wrap mb-2"
-              >
+              <div className="text-sm text-gray-300 whitespace-pre-wrap mb-2">
                 {description}
               </div>
             )}
@@ -75,9 +79,7 @@ export function EmbedPreview({
                 {fields.map((field, i) => (
                   <div
                     key={i}
-                    className={`${
-                      field.inline ? "col-span-4" : "col-span-12"
-                    }`}
+                    className={`${field.inline ? "col-span-4" : "col-span-12"}`}
                   >
                     <div className="text-sm font-semibold text-gray-200 mb-0.5">
                       {field.name}
@@ -116,7 +118,13 @@ export function EmbedPreview({
                 <span>
                   {footer}
                   {footer && timestamp && " • "}
-                  {timestamp && new Date(timestamp).toLocaleDateString() + " " + new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {timestamp &&
+                    new Date(timestamp).toLocaleDateString() +
+                      " " +
+                      new Date(timestamp).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                 </span>
               </div>
             )}

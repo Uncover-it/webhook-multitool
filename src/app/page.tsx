@@ -123,6 +123,14 @@ interface WebhookEmbed {
   url?: string;
 }
 
+interface WebhookPoll {
+  question: { text: string };
+  answers: { poll_media: { text: string } }[];
+  allow_multiselect: boolean;
+  duration: number;
+  layout_type?: number;
+}
+
 interface WebhookPayload {
   username?: string;
   avatar_url?: string;
@@ -130,6 +138,7 @@ interface WebhookPayload {
   embeds?: WebhookEmbed[];
   tts?: boolean;
   flags?: number;
+  poll?: WebhookPoll;
 }
 
 interface WebhookHistoryItem {
@@ -281,8 +290,7 @@ export default function WebhookTool() {
     setLoading(true);
 
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const payload: WebhookPayload & { poll?: any } = {};
+      const payload: WebhookPayload = {};
 
       if (username) payload.username = username;
       if (avatarUrl) payload.avatar_url = avatarUrl;
@@ -407,8 +415,7 @@ export default function WebhookTool() {
   const startSpam = async () => {
     setIsSpamming(true);
     spamRef.current.stop = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const payload: WebhookPayload & { poll?: any } = {};
+    const payload: WebhookPayload = {};
     if (username) payload.username = username;
     if (avatarUrl) payload.avatar_url = avatarUrl;
     if (content) payload.content = content;
@@ -522,7 +529,7 @@ export default function WebhookTool() {
             throw new Error(error.message);
           }
         } catch (error) {
-          if (!response || response.status !== 429) {
+          if (response?.status !== 429) {
             toast.error("Error sending webhook", {
               description:
                 error instanceof Error ? error.message : String(error),
@@ -780,17 +787,19 @@ export default function WebhookTool() {
                             {savedWebhooks.map((webhook, index) => (
                               <div
                                 key={index}
-                                className="flex items-center justify-between p-2 hover:bg-muted cursor-pointer"
-                                onClick={() => selectWebhook(webhook.url)}
+                                className="flex items-center justify-between p-2 hover:bg-muted"
                               >
-                                <span className="truncate">{webhook.name}</span>
+                                <button
+                                  type="button"
+                                  className="flex-1 truncate text-left cursor-pointer"
+                                  onClick={() => selectWebhook(webhook.url)}
+                                >
+                                  {webhook.name}
+                                </button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteWebhook(index);
-                                  }}
+                                  onClick={() => deleteWebhook(index)}
                                 >
                                   <Trash2 className="size-4" />
                                 </Button>
@@ -1075,7 +1084,7 @@ export default function WebhookTool() {
                               <DropdownMenuRadioGroup
                                 value={pollDuration.toString()}
                                 onValueChange={(val) =>
-                                  setPollDuration(parseInt(val))
+                                  setPollDuration(Number.parseInt(val, 10))
                                 }
                               >
                                 <DropdownMenuRadioItem value="1">
