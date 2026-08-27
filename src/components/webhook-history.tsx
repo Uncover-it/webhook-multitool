@@ -130,7 +130,7 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
   };
 
   return (
-    <Card>
+    <Card className="backdrop-blur-3xl bg-background/10">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Webhook History</CardTitle>

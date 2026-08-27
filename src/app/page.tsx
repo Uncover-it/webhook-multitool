@@ -45,11 +45,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useTheme } from "next-themes";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import github from "@/../public/github.svg";
 import discord from "@/../public/discord.svg";
@@ -688,7 +683,7 @@ export default function WebhookTool() {
         <div className="h-320 absolute left-0 top-0 w-60 -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.06)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)] [translate:5%_-50%]" />
         <div className="h-320 -translate-y-87.5 absolute left-0 top-0 w-60 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.04)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
       </div>
-      <div className="mx-auto max-w-5xl py-8 relative">
+      <div className="mx-auto max-w-5xl py-8 relative px-6 lg:px-0">
         <h1 className="text-3xl font-bold mb-6 text-center">
           Discord Webhook Multi-Tool
         </h1>
@@ -699,15 +694,17 @@ export default function WebhookTool() {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="message">Message</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-muted/80">
+            <TabsTrigger value="message" className="backdrop">
+              Message
+            </TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
             <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="message" className="space-y-4 mt-4">
-            <Card>
+            <Card className="backdrop-blur-3xl bg-background/10">
               <CardHeader>
                 <CardTitle>Webhook Configuration</CardTitle>
                 <CardDescription>
@@ -725,81 +722,6 @@ export default function WebhookTool() {
                       onChange={(e) => setWebhookUrl(e.target.value)}
                       disabled={isSpamming}
                     />
-                    <Dialog>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <DialogTrigger asChild>
-                            <Button
-                              aria-label="Delete Webhook"
-                              variant="destructive"
-                              size="icon"
-                              disabled={!webhookUrl}
-                            >
-                              <Trash2 />
-                            </Button>
-                          </DialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Delete Webhook</p>
-                        </TooltipContent>
-                      </Tooltip>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Are you absolutely sure?</DialogTitle>
-                          <DialogDescription>
-                            This action cannot be undone. This will permanently
-                            delete the webhook from Discord and prevent any
-                            futher messages from being sent to it.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                          <DialogClose asChild>
-                            <Button
-                              type="button"
-                              size={"sm"}
-                              className="rounded-lg"
-                            >
-                              Close
-                            </Button>
-                          </DialogClose>
-                          <DialogClose asChild>
-                            <Button
-                              variant={"destructive"}
-                              size={"sm"}
-                              className="rounded-lg"
-                              onClick={async () => {
-                                if (!webhookUrl) return;
-                                try {
-                                  const response = await fetch(webhookUrl, {
-                                    method: "DELETE",
-                                  });
-                                  if (response.ok) {
-                                    setWebhookUrl("");
-                                    toast.success("Webhook deleted", {
-                                      description:
-                                        "The webhook has been deleted from Discord.",
-                                    });
-                                  } else {
-                                    toast.error("Failed to delete webhook", {
-                                      description: `Error: ${response.status} ${response.statusText}`,
-                                    });
-                                  }
-                                } catch (error) {
-                                  toast.error("Error deleting webhook", {
-                                    description:
-                                      error instanceof Error
-                                        ? error.message
-                                        : "Unknown error occurred",
-                                  });
-                                }
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </DialogClose>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
                     {savedWebhooks.length > 0 && (
                       <div className="relative">
                         <Popover>
@@ -1482,15 +1404,100 @@ export default function WebhookTool() {
                     >
                       Clear
                     </Button>
-                    {useSpam ? (
-                      isSpamming ? (
-                        <Button variant="destructive" onClick={stopSpam}>
-                          <CircleStop className="size-4" />
-                          Stop Spam
-                        </Button>
+                    <div className="gap-2 flex">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            aria-label="Delete Webhook"
+
+                            variant="destructive"
+                            disabled={!webhookUrl}
+                          >
+                            <Trash2 /> Delete Webhook
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Are you absolutely sure?</DialogTitle>
+                            <DialogDescription>
+                              This action cannot be undone. This will
+                              permanently delete the webhook from Discord and
+                              prevent any futher messages from being sent to it.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <DialogClose asChild>
+                              <Button
+                                type="button"
+                                size={"sm"}
+                                className="rounded-lg"
+                              >
+                                Close
+                              </Button>
+                            </DialogClose>
+                            <DialogClose asChild>
+                              <Button
+                                variant={"destructive"}
+                                size={"sm"}
+                                className="rounded-lg"
+                                onClick={async () => {
+                                  if (!webhookUrl) return;
+                                  try {
+                                    const response = await fetch(webhookUrl, {
+                                      method: "DELETE",
+                                    });
+                                    if (response.ok) {
+                                      setWebhookUrl("");
+                                      toast.success("Webhook deleted", {
+                                        description:
+                                          "The webhook has been deleted from Discord.",
+                                      });
+                                    } else {
+                                      toast.error("Failed to delete webhook", {
+                                        description: `Error: ${response.status} ${response.statusText}`,
+                                      });
+                                    }
+                                  } catch (error) {
+                                    toast.error("Error deleting webhook", {
+                                      description:
+                                        error instanceof Error
+                                          ? error.message
+                                          : "Unknown error occurred",
+                                    });
+                                  }
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </DialogClose>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                      {useSpam ? (
+                        isSpamming ? (
+                          <Button variant="destructive" onClick={stopSpam}>
+                            <CircleStop className="size-4" />
+                            Stop Spam
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={startSpam}
+                            disabled={
+                              loading ||
+                              !webhookUrl ||
+                              (!content &&
+                                !useEmbed &&
+                                !usePoll &&
+                                files.length === 0)
+                            }
+                          >
+                            <Play className="size-4" />
+                            Start Spam
+                          </Button>
+                        )
                       ) : (
                         <Button
-                          onClick={startSpam}
+                          onClick={sendWebhook}
                           disabled={
                             loading ||
                             !webhookUrl ||
@@ -1500,26 +1507,11 @@ export default function WebhookTool() {
                               files.length === 0)
                           }
                         >
-                          <Play className="size-4" />
-                          Start Spam
+                          <Send className="size-4" />
+                          {loading ? "Sending..." : "Send Webhook"}
                         </Button>
-                      )
-                    ) : (
-                      <Button
-                        onClick={sendWebhook}
-                        disabled={
-                          loading ||
-                          !webhookUrl ||
-                          (!content &&
-                            !useEmbed &&
-                            !usePoll &&
-                            files.length === 0)
-                        }
-                      >
-                        <Send className="size-4" />
-                        {loading ? "Sending..." : "Send Webhook"}
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </CardFooter>
                 </Card>
               </div>
@@ -1598,7 +1590,7 @@ export default function WebhookTool() {
           </TabsContent>
 
           <TabsContent value="edit" className="space-y-4 mt-4">
-            <Card>
+            <Card className="backdrop-blur-3xl bg-background/10">
               <CardHeader>
                 <CardTitle>Edit Webhook</CardTitle>
                 <CardDescription>
@@ -1664,7 +1656,7 @@ export default function WebhookTool() {
           </TabsContent>
 
           <TabsContent value="webhooks" className="space-y-4 mt-4">
-            <Card>
+            <Card className="backdrop-blur-3xl bg-background/10">
               <CardHeader>
                 <CardTitle>Saved Webhooks</CardTitle>
                 <CardDescription>
