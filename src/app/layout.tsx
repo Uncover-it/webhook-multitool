@@ -3,7 +3,6 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import "./globals.css";
-import { Grid } from "@/components/ui/grid";
 import Script from "next/script";
 
 export const metadata: Metadata = {

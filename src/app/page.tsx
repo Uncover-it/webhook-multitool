@@ -1409,7 +1409,6 @@ export default function WebhookTool() {
                         <DialogTrigger asChild>
                           <Button
                             aria-label="Delete Webhook"
-
                             variant="destructive"
                             disabled={!webhookUrl}
                           >
