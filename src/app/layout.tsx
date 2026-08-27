@@ -58,18 +58,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans">
         <ThemeProvider attribute="class" disableTransitionOnChange enableSystem>
-          <div
-            style={{ position: "fixed", inset: 0, zIndex: -1 }}
-            aria-hidden="true"
-          >
-            <Grid />
-          </div>
           {children}
           <Toaster position="top-right" />
         </ThemeProvider>
+        <GoogleAnalytics gaId="G-T1PPWT7NT4" />
+        <Script src="https://api.instatus.com/widget?host=status.uncoverit.org&code=4f0eef87&locale=en" />
       </body>
-      <GoogleAnalytics gaId="G-T1PPWT7NT4" />
-      <Script src="https://api.instatus.com/widget?host=status.uncoverit.org&code=4f0eef87&locale=en" />
     </html>
   );
 }

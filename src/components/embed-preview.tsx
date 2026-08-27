@@ -97,7 +97,7 @@ export function EmbedPreview({
                 <Image
                   src={image}
                   alt=""
-                  className="max-w-full rounded-md max-h-[300px] object-contain"
+                  className="w-auto h-auto max-w-full rounded-md max-h-[300px] object-contain"
                   width={400}
                   height={300}
                 />
