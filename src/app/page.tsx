@@ -1396,21 +1396,23 @@ export default function WebhookTool() {
                       </div>
                     )}
                   </CardContent>
-                  <CardFooter className="flex justify-between">
+                  <CardFooter className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <Button
                       variant="outline"
                       onClick={clearForm}
                       disabled={isSpamming}
+                      className="w-full sm:w-auto"
                     >
                       Clear
                     </Button>
-                    <div className="gap-2 flex">
+                    <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center">
                       <Dialog>
                         <DialogTrigger asChild>
                           <Button
                             aria-label="Delete Webhook"
                             variant="destructive"
                             disabled={!webhookUrl}
+                            className="w-full sm:w-auto"
                           >
                             <Trash2 /> Delete Webhook
                           </Button>
@@ -1474,7 +1476,11 @@ export default function WebhookTool() {
                       </Dialog>
                       {useSpam ? (
                         isSpamming ? (
-                          <Button variant="destructive" onClick={stopSpam}>
+                          <Button
+                            variant="destructive"
+                            onClick={stopSpam}
+                            className="w-full sm:w-auto"
+                          >
                             <CircleStop className="size-4" />
                             Stop Spam
                           </Button>
@@ -1489,6 +1495,7 @@ export default function WebhookTool() {
                                 !usePoll &&
                                 files.length === 0)
                             }
+                            className="w-full sm:w-auto"
                           >
                             <Play className="size-4" />
                             Start Spam
@@ -1505,6 +1512,7 @@ export default function WebhookTool() {
                               !usePoll &&
                               files.length === 0)
                           }
+                          className="w-full sm:w-auto"
                         >
                           <Send className="size-4" />
                           {loading ? "Sending..." : "Send Webhook"}
