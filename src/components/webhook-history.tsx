@@ -1,76 +1,57 @@
 "use client";
 
-import Image from "next/image";
+import { Copy, Pencil, Send, Trash2, X } from "lucide-react";
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Trash2, Copy, Send } from "lucide-react";
 import { toast } from "sonner";
+import { DiscordMarkdown } from "@/components/discord-markdown";
 import { EmbedPreview } from "@/components/embed-preview";
-
-interface WebhookEmbed {
-  title?: string;
-  description?: string;
-  color?: number;
-  author?: { name: string; icon_url?: string };
-  footer?: { text: string; icon_url?: string };
-  thumbnail?: { url: string };
-  image?: { url: string };
-}
-
-interface WebhookPayload {
-  username?: string;
-  avatar_url?: string;
-  content?: string;
-  embeds?: WebhookEmbed[];
-  tts?: boolean;
-}
-
-interface WebhookHistoryItem {
-  timestamp: string;
-  payload: WebhookPayload;
-  webhookUrl: string;
-}
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Empty, mono, Section } from "@/components/kit";
+import type { WebhookHistoryItem, WebhookPayload } from "@/lib/webhook";
+import { readErrorMessage } from "@/lib/webhook";
 
 interface WebhookHistoryProps {
   history: WebhookHistoryItem[];
   setHistory: (history: WebhookHistoryItem[]) => void;
+  /** Loads a sent message into the composer to change it */
+  onEdit: (item: WebhookHistoryItem) => void;
+  /** Deletes a sent message from Discord */
+  onDelete: (item: WebhookHistoryItem) => void;
 }
 
-export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
-  const [loading, setLoading] = useState<Record<number, boolean>>({});
+const formatDate = (dateString: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+  }).format(new Date(dateString));
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
-    }).format(date);
-  };
+// The webhook's ID and the start of its token: enough to tell webhooks apart
+const shortWebhook = (url: string) => {
+  const match = /webhooks\/(\d+)\/([\w-]{6})/.exec(url);
+  return match ? `${match[1]} · ${match[2]}…` : url;
+};
+
+export function WebhookHistory({
+  history,
+  setHistory,
+  onEdit,
+  onDelete,
+}: WebhookHistoryProps) {
+  const [busy, setBusy] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   const copyPayload = async (payload: WebhookPayload) => {
     try {
       await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      toast.info("Copied", {
-        description: "Webhook payload copied to clipboard",
+      toast.success("Copied to clipboard!", {
+        description: "The message JSON",
       });
-    } catch (error) {
-      console.error("Error copying payload:", error);
-      toast.error("Copy failed", {
-        description:
-          error instanceof Error ? error.message : "Unable to copy payload",
-      });
+    } catch {
+      toast.error("Could not copy to clipboard");
     }
   };
 
@@ -79,191 +60,175 @@ export function WebhookHistory({ history, setHistory }: WebhookHistoryProps) {
     webhookUrl: string,
     payload: WebhookPayload,
   ) => {
-    setLoading((prev) => ({ ...prev, [index]: true }));
-
+    setBusy(index);
     try {
       const response = await fetch(webhookUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`);
-      }
-
+      if (!response.ok) throw new Error(await readErrorMessage(response));
       toast.success("Webhook resent", {
         description: "Your message has been sent successfully",
       });
     } catch (error) {
-      console.error("Error sending webhook:", error);
       toast.error("Error sending webhook", {
         description:
           error instanceof Error ? error.message : "Unknown error occurred",
       });
     } finally {
-      setLoading((prev) => ({ ...prev, [index]: false }));
+      setBusy(null);
     }
-  };
-
-  const clearHistory = () => {
-    localStorage.removeItem("webhookHistory");
-    setHistory([]);
-  };
-
-  const deleteHistoryItem = (index: number) => {
-    const newHistory = history.filter((_, i) => i !== index);
-
-    try {
-      localStorage.setItem("webhookHistory", JSON.stringify(newHistory));
-    } catch (error) {
-      console.error("Error saving webhook history:", error);
-      toast.error("Failed to update saved history", {
-        description:
-          "The item was removed from the current view, but saving to local storage failed.",
-      });
-    }
-
-    setHistory(newHistory);
   };
 
   return (
-    <Card className="backdrop-blur-3xl bg-background/10">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Webhook History</CardTitle>
-          <CardDescription>
-            Your previously sent webhook messages
-          </CardDescription>
-        </div>
-        {history.length > 0 && (
-          <Button variant="destructive" onClick={clearHistory}>
-            <Trash2 className="mr-2 h-4 w-4" />
-            Clear History
+    <Section
+      title="History"
+      description="Messages sent from this browser. Ones sent since this update can be edited or deleted in Discord."
+      actions={
+        history.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            className={mono}
+            onClick={() => setHistory([])}
+          >
+            Clear history
           </Button>
-        )}
-      </CardHeader>
-      <CardContent>
+        )
+      }
+    >
+      <div className="my-2">
         {history.length === 0 ? (
-          <p className="text-muted-foreground">
-            No webhook history yet. Send a message to see it here.
-          </p>
+          <Empty>No webhook history yet. Send a message to see it here.</Empty>
         ) : (
-          <ScrollArea className="h-[600px]">
-            <div className="space-y-4">
-              {history.map((item, index) => (
-                <Card key={index} className="border-muted">
-                  <CardHeader className="p-3 pb-2">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm font-medium leading-none mb-1.5">
-                          {formatDate(item.timestamp)}
-                        </CardTitle>
-                        <CardDescription
-                          className="truncate text-xs"
-                          title={item.webhookUrl}
-                        >
-                          {item.webhookUrl}
-                        </CardDescription>
-                      </div>
-                      <div className="flex gap-1.5 shrink-0">
+          <ul className="space-y-2">
+            {history.map((item, index) => (
+              <li
+                key={`${item.timestamp}-${index}`}
+                className="rounded-xl border border-border/40 bg-accent p-3 text-sm dark:bg-muted/40"
+              >
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <span className="font-medium">
+                    {formatDate(item.timestamp)}
+                  </span>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {shortWebhook(item.webhookUrl)}
+                  </span>
+                  {item.edited && !item.deleted && (
+                    <Badge variant="secondary">Edited</Badge>
+                  )}
+                  {item.deleted && <Badge variant="destructive">Deleted</Badge>}
+                  <div className="ml-auto flex flex-wrap gap-1.5">
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Copy JSON"
+                      title="Copy JSON"
+                      onClick={() => copyPayload(item.payload)}
+                    >
+                      <Copy />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      aria-label="Send again"
+                      title="Send again"
+                      onClick={() =>
+                        resendWebhook(index, item.webhookUrl, item.payload)
+                      }
+                      disabled={busy === index}
+                    >
+                      <Send />
+                    </Button>
+                    {item.messageId && !item.deleted && (
+                      <>
                         <Button
                           variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => copyPayload(item.payload)}
+                          size="sm"
+                          className={mono}
+                          onClick={() => onEdit(item)}
                         >
-                          <Copy className="h-3.5 w-3.5" />
+                          <Pencil />
+                          Edit
                         </Button>
                         <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() =>
-                            resendWebhook(index, item.webhookUrl, item.payload)
+                          variant={
+                            confirmDelete === index ? "destructive" : "outline"
                           }
-                          disabled={loading[index]}
+                          size="sm"
+                          className={mono}
+                          onClick={() => {
+                            if (confirmDelete !== index) {
+                              setConfirmDelete(index);
+                              return;
+                            }
+                            setConfirmDelete(null);
+                            onDelete(item);
+                          }}
+                          onBlur={() => setConfirmDelete(null)}
                         >
-                          <Send className="h-3.5 w-3.5" />
+                          <Trash2 />
+                          {confirmDelete === index
+                            ? "Delete in Discord?"
+                            : "Delete"}
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => deleteHistoryItem(index)}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-3 pt-0">
-                    <div className="bg-[#36393f] text-white rounded-md p-3">
-                      {item.payload.username && (
-                        <div className="flex items-center gap-2 mb-2">
-                          {item.payload.avatar_url ? (
-                            <div className="w-6 h-6 rounded-full overflow-hidden">
-                              <Image
-                                src={item.payload.avatar_url}
-                                alt="Avatar"
-                                width={24}
-                                height={24}
-                                className="w-full h-full object-cover"
-                                unoptimized={true}
-                              />
-                            </div>
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-600"></div>
-                          )}
-                          <span className="font-semibold text-sm">
-                            {item.payload.username}
-                          </span>
-                        </div>
-                      )}
+                      </>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Remove from history"
+                      title="Remove from history (stays in Discord)"
+                      onClick={() =>
+                        setHistory(history.filter((_, i) => i !== index))
+                      }
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                </div>
 
-                      {item.payload.content && (
-                        <p className="text-sm mb-2 break-words">
-                          {item.payload.content}
-                        </p>
-                      )}
-
-                      {item.payload.embeds &&
-                        item.payload.embeds.length > 0 && (
-                          <div className="space-y-2">
-                            {item.payload.embeds.map(
-                              (embed: WebhookEmbed, embedIndex: number) => (
-                                <EmbedPreview
-                                  key={embedIndex}
-                                  title={embed.title}
-                                  description={embed.description}
-                                  color={
-                                    embed.color
-                                      ? `#${embed.color
-                                          .toString(16)
-                                          .padStart(6, "0")}`
-                                      : undefined
-                                  }
-                                  author={embed.author?.name}
-                                  authorIcon={embed.author?.icon_url}
-                                  footer={embed.footer?.text}
-                                  footerIcon={embed.footer?.icon_url}
-                                  thumbnail={embed.thumbnail?.url}
-                                  image={embed.image?.url}
-                                />
-                              ),
-                            )}
-                          </div>
-                        )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
+                <div className="space-y-2 rounded-lg bg-[#313338] p-3 text-sm text-[#dbdee1]">
+                  {item.payload.username && (
+                    <p className="font-medium text-white">
+                      {item.payload.username}
+                    </p>
+                  )}
+                  {item.payload.content && (
+                    <DiscordMarkdown text={item.payload.content} />
+                  )}
+                  {item.payload.embeds?.map((embed, embedIndex) => (
+                    <EmbedPreview
+                      key={embedIndex}
+                      title={embed.title}
+                      description={embed.description}
+                      color={
+                        typeof embed.color === "number"
+                          ? `#${embed.color.toString(16).padStart(6, "0")}`
+                          : undefined
+                      }
+                      author={embed.author?.name}
+                      authorIcon={embed.author?.icon_url}
+                      footer={embed.footer?.text}
+                      footerIcon={embed.footer?.icon_url}
+                      thumbnail={embed.thumbnail?.url}
+                      image={embed.image?.url}
+                      fields={embed.fields}
+                      timestamp={embed.timestamp}
+                    />
+                  ))}
+                  {item.payload.poll && (
+                    <p className="text-xs text-[#949ba4]">
+                      Poll: {item.payload.poll.question.text}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </Section>
   );
 }

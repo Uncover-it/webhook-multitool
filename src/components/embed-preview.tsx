@@ -1,4 +1,5 @@
-import Image from "next/image";
+/** biome-ignore-all lint/performance/noImgElement: these are arbitrary URLs the user typed, which next/image can neither optimise in a static export nor load without a configured host */
+import { DiscordMarkdown } from "@/components/discord-markdown";
 
 interface EmbedPreviewProps {
   title?: string;
@@ -29,119 +30,107 @@ export function EmbedPreview({
   timestamp,
   url,
 }: EmbedPreviewProps) {
+  // Discord lays inline fields out three to a row
+  const rows: { name: string; value: string; inline?: boolean }[][] = [];
+  for (const field of fields) {
+    const last = rows.at(-1);
+    if (field.inline && last && last.length < 3 && last.every((f) => f.inline))
+      last.push(field);
+    else rows.push([field]);
+  }
+
   return (
     <div
-      className="rounded-md overflow-hidden max-w-[520px]"
-      style={{ borderLeft: `4px solid ${color}` }}
+      className="max-w-[520px] overflow-hidden rounded-[4px] border-l-4 bg-[#2b2d31]"
+      style={{ borderLeftColor: color }}
     >
-      <div className="bg-[#2f3136] p-3 rounded-tr-md rounded-br-md">
-        {author && (
-          <div className="flex items-center gap-2 mb-2">
-            {authorIcon && (
-              <Image
-                src={authorIcon}
-                alt=""
-                className="rounded-full w-6 h-6 object-cover"
-                height={24}
-                width={24}
-              />
-            )}
-            <span className="text-sm font-medium">{author}</span>
-          </div>
-        )}
-
-        <div className="flex">
-          <div className="flex-1 min-w-0" style={{ wordBreak: "break-word" }}>
-            {title && (
-              <div className="font-semibold mb-1">
-                {url ? (
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[#00b0f4] hover:underline"
-                  >
-                    {title}
-                  </a>
-                ) : (
-                  title
-                )}
-              </div>
-            )}
-            {description && (
-              <div className="text-sm text-gray-300 whitespace-pre-wrap mb-2">
-                {description}
-              </div>
-            )}
-
-            {fields && fields.length > 0 && (
-              <div className="grid grid-cols-12 gap-2 mt-2">
-                {fields.map((field, i) => (
-                  <div
-                    key={i}
-                    className={`${field.inline ? "col-span-4" : "col-span-12"}`}
-                  >
-                    <div className="text-sm font-semibold text-gray-200 mb-0.5">
-                      {field.name}
-                    </div>
-                    <div className="text-sm text-gray-300 whitespace-pre-wrap">
-                      {field.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {image && (
-              <div className="mt-3">
-                <Image
-                  src={image}
+      <div className="flex gap-4 p-3 pr-4">
+        <div className="min-w-0 flex-1 space-y-2">
+          {author && (
+            <div className="flex items-center gap-2">
+              {authorIcon && (
+                <img
+                  src={authorIcon}
                   alt=""
-                  className="w-auto h-auto max-w-full rounded-md max-h-[300px] object-contain"
-                  width={400}
-                  height={300}
+                  className="size-6 rounded-full object-cover"
                 />
-              </div>
-            )}
-
-            {(footer || timestamp) && (
-              <div className="flex items-center gap-2 mt-3 text-xs text-gray-400">
-                {footerIcon && (
-                  <Image
-                    src={footerIcon}
-                    alt=""
-                    className="rounded-full w-5 h-5 object-cover"
-                    width={20}
-                    height={20}
-                  />
-                )}
-                <span>
-                  {footer}
-                  {footer && timestamp && " • "}
-                  {timestamp &&
-                    new Date(timestamp).toLocaleDateString() +
-                      " " +
-                      new Date(timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {thumbnail && (
-            <div className="ml-4 flex-shrink-0">
-              <Image
-                src={thumbnail}
-                alt=""
-                className="object-cover rounded-md w-20 h-20"
-                height={80}
-                width={80}
-              />
+              )}
+              <span className="text-sm font-semibold">{author}</span>
+            </div>
+          )}
+          {title && (
+            <div
+              className={url ? "font-semibold text-[#00a8fc]" : "font-semibold"}
+            >
+              <DiscordMarkdown text={title} inline />
+            </div>
+          )}
+          {description && (
+            <DiscordMarkdown
+              text={description}
+              className="text-sm text-[#dbdee1]"
+            />
+          )}
+          {rows.length > 0 && (
+            <div className="space-y-2">
+              {rows.map((row, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className="grid gap-2"
+                  style={{
+                    gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {row.map((field, fieldIndex) => (
+                    <div key={fieldIndex} className="min-w-0">
+                      <div className="mb-0.5 text-sm font-semibold">
+                        <DiscordMarkdown text={field.name} inline />
+                      </div>
+                      <DiscordMarkdown
+                        text={field.value}
+                        className="text-sm text-[#dbdee1]"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+          {image && (
+            <img
+              src={image}
+              alt=""
+              className="max-h-[300px] w-auto max-w-full rounded-[4px] object-contain"
+            />
+          )}
+          {(footer || timestamp) && (
+            <div className="flex items-center gap-2 text-xs text-[#b5bac1]">
+              {footerIcon && (
+                <img
+                  src={footerIcon}
+                  alt=""
+                  className="size-5 rounded-full object-cover"
+                />
+              )}
+              <span>
+                {footer}
+                {footer && timestamp && " • "}
+                {timestamp &&
+                  new Date(timestamp).toLocaleString([], {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
+              </span>
             </div>
           )}
         </div>
+        {thumbnail && (
+          <img
+            src={thumbnail}
+            alt=""
+            className="size-20 shrink-0 rounded-[4px] object-cover"
+          />
+        )}
       </div>
     </div>
   );

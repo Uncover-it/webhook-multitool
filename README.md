@@ -1,6 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 # Self-hosting
+
 First, clone the repository:
 
 ```bash
@@ -22,11 +23,13 @@ bun run dev
 ## Production Build (if you want to publish the site)
 
 Building:
+
 ```bash
 bun run build
 ```
 
 Running:
+
 ```bash
 bun run start
 ```
@@ -41,12 +44,14 @@ Go to **Workers & Pages** > **Create application** > **Pages** and connect your 
 
 Select **Next.js** as the framework preset. Ensure these values are set:
 
-* **Build command:**
+- **Build command:**
+
   ```bash
   bunx @cloudflare/next-on-pages@1
   ```
 
-* **Build output directory:**
+- **Build output directory:**
+
   ```bash
   .vercel/output/static
   ```
@@ -54,12 +59,13 @@ Select **Next.js** as the framework preset. Ensure these values are set:
 ### 3. Environment Variables
 
 Under **Environment variables (advanced)**, add:
-  
-|Variable Name| Value
-|-------|-------|
-|NODE_VERSION| 20
+
+| Variable Name | Value |
+| ------------- | ----- |
+| NODE_VERSION  | 20    |
 
 **Deploy**
+
 ### 4. Enable Compatibility (Crucial)
 
 After the first deployment starts/fails:
@@ -67,12 +73,13 @@ After the first deployment starts/fails:
 1. Go to **Settings** > **Runtime**.
 
 2. In **Compatibility flags**, add:
+
    ```bash
    nodejs_compat
    ```
 
-4. Go to **Deployments** and click **Retry deployment**.
-   
+3. Go to **Deployments** and click **Retry deployment**.
+
 ## Similar Projects
 
 - [koalahook](https://github.com/infamouskoala/koalahook) by [infamouskoala](https://github.com/infamouskoala)

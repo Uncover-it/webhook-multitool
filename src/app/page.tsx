@@ -1,192 +1,80 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Check,
+  ChevronDown,
+  CircleStop,
   Copy,
+  Paperclip,
+  Play,
   Save,
   Send,
   Trash2,
-  MoonStar,
-  Sun,
-  CircleStop,
-  Play,
-  Plus,
-  Paperclip,
   X,
-  ChevronDown,
 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ColorPicker } from "@/components/color-picker";
-import { WebhookHistory } from "@/components/webhook-history";
-import { EmbedPreview } from "@/components/embed-preview";
-import { PollPreview } from "@/components/poll-preview";
+import {
+  Actions,
+  Empty,
+  Field,
+  mono,
+  PageIntro,
+  Panel,
+  Section,
+  ToolTabs,
+  TriggerLabel,
+} from "@/components/kit";
+import { PayloadTools } from "@/components/payload-tools";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useTheme } from "next-themes";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import github from "@/../public/github.svg";
-import discord from "@/../public/discord.svg";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { DiscordPreview } from "@/components/webhook/discord-preview";
+import { EmbedEditor } from "@/components/webhook/embed-editor";
+import { PollEditor } from "@/components/webhook/poll-editor";
+import { WebhookHistory } from "@/components/webhook-history";
+import { readJson, writeJson } from "@/lib/storage";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-interface EmbedField {
-  name: string;
-  value: string;
-  inline: boolean;
-}
-
-interface EmbedState {
-  title: string;
-  description: string;
-  color: string;
-  author: string;
-  authorIcon: string;
-  footer: string;
-  footerIcon: string;
-  thumbnail: string;
-  image: string;
-  fields: EmbedField[];
-  timestamp?: string;
-  url: string;
-}
-
-const initialEmbedState: EmbedState = {
-  title: "",
-  description: "",
-  color: "#5865F2",
-  author: "",
-  authorIcon: "",
-  footer: "",
-  footerIcon: "",
-  thumbnail: "",
-  image: "",
-  fields: [],
-  url: "",
-};
-
-const makeEmbed = (): EmbedState => ({ ...initialEmbedState, fields: [] });
-
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-const readErrorMessage = async (response: Response): Promise<string> => {
-  const fallback = `Error: ${response.status} ${response.statusText}`;
-  try {
-    const body = await response.json();
-    return typeof body?.message === "string" && body.message
-      ? body.message
-      : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const readRetryAfter = async (response: Response): Promise<number> => {
-  const header = Number.parseFloat(response.headers.get("retry-after") ?? "");
-  if (Number.isFinite(header) && header > 0) return header * 1000;
-
-  try {
-    const body = await response.json();
-    if (typeof body?.retry_after === "number" && body.retry_after > 0) {
-      return body.retry_after * 1000;
-    }
-  } catch {}
-  return 1000;
-};
-
-const buildRequestInit = (payload: WebhookPayload, files: File[]) => {
-  if (files.length === 0) {
-    return {
-      body: JSON.stringify(payload) as string | FormData,
-      headers: { "Content-Type": "application/json" } as Record<string, string>,
-    };
-  }
-
-  const formData = new FormData();
-  formData.append("payload_json", JSON.stringify(payload));
-  files.forEach((file, index) => {
-    formData.append(`file${index}`, file);
-  });
-  return {
-    body: formData as string | FormData,
-    headers: {} as Record<string, string>,
-  };
-};
-
-interface WebhookEmbed {
-  title?: string;
-  description?: string;
-  color?: number;
-  author?: { name: string; icon_url?: string };
-  footer?: { text: string; icon_url?: string };
-  thumbnail?: { url: string };
-  image?: { url: string };
-  fields?: { name: string; value: string; inline?: boolean }[];
-  timestamp?: string;
-  url?: string;
-}
-
-interface WebhookPoll {
-  question: { text: string };
-  answers: { poll_media: { text: string } }[];
-  allow_multiselect: boolean;
-  duration: number;
-  layout_type?: number;
-}
-
-interface WebhookPayload {
-  username?: string;
-  avatar_url?: string;
-  content?: string;
-  embeds?: WebhookEmbed[];
-  tts?: boolean;
-  flags?: number;
-  poll?: WebhookPoll;
-}
-
-interface WebhookHistoryItem {
-  timestamp: string;
-  payload: WebhookPayload;
-  webhookUrl: string;
-}
+  buildRequestInit,
+  type EmbedField,
+  type EmbedState,
+  embedToState,
+  FLAG_SILENT,
+  FLAG_SUPPRESS_EMBEDS,
+  makeEmbed,
+  type MentionKind,
+  messageUrl,
+  parseMessageRef,
+  readErrorMessage,
+  readRetryAfter,
+  sleep,
+  stateToEmbed,
+  type WebhookHistoryItem,
+  type WebhookPayload,
+} from "@/lib/webhook";
 
 interface WebhookEditPayload {
   name?: string;
@@ -225,25 +113,19 @@ export default function WebhookTool() {
   const [isSpamming, setIsSpamming] = useState(false);
   const [useSpam, setUseSpam] = useState(false);
   const spamRef = useRef<{ stop: boolean }>({ stop: false });
+  const [mentions, setMentions] = useState<MentionKind[]>(["users", "roles"]);
+  const [editing, setEditing] = useState<{
+    webhookUrl: string;
+    messageId: string;
+    threadId?: string;
+  } | null>(null);
+  const [messageRef, setMessageRef] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("savedWebhooks");
-    if (saved) {
-      try {
-        setSavedWebhooks(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem("savedWebhooks");
-      }
-    }
-
-    const historyData = localStorage.getItem("webhookHistory");
-    if (historyData) {
-      try {
-        setHistory(JSON.parse(historyData));
-      } catch {
-        localStorage.removeItem("webhookHistory");
-      }
-    }
+    setSavedWebhooks(
+      readJson<{ name: string; url: string }[]>("savedWebhooks", []),
+    );
+    setHistory(readJson<WebhookHistoryItem[]>("webhookHistory", []));
   }, []);
 
   useEffect(() => {
@@ -253,7 +135,6 @@ export default function WebhookTool() {
     };
   }, []);
 
-  const { theme, setTheme } = useTheme();
   const saveWebhook = () => {
     if (!webhookUrl || !webhookName) {
       toast.error("Error", {
@@ -333,186 +214,27 @@ export default function WebhookTool() {
     }
   };
 
-  const sendWebhook = async () => {
-    setLoading(true);
-
-    try {
-      const payload: WebhookPayload = {};
-
-      if (username) payload.username = username;
-      if (avatarUrl) payload.avatar_url = avatarUrl;
-      if (content) payload.content = content;
-
-      let flags = 0;
-      if (suppressEmbeds) flags |= 1 << 2;
-      if (silentMessage) flags |= 1 << 12;
-      if (flags > 0) payload.flags = flags;
-
-      if (useEmbed) {
-        payload.embeds = embeds.map((embedState) => {
-          const embed: WebhookEmbed = {};
-          if (embedState.title) embed.title = embedState.title;
-          if (embedState.description)
-            embed.description = embedState.description;
-          if (embedState.color)
-            embed.color = Number.parseInt(
-              embedState.color.replace("#", ""),
-              16,
-            );
-
-          if (embedState.author) {
-            embed.author = { name: embedState.author };
-            if (embedState.authorIcon)
-              embed.author.icon_url = embedState.authorIcon;
-          }
-
-          if (embedState.footer) {
-            embed.footer = { text: embedState.footer };
-            if (embedState.footerIcon)
-              embed.footer.icon_url = embedState.footerIcon;
-          }
-
-          if (embedState.thumbnail)
-            embed.thumbnail = { url: embedState.thumbnail };
-          if (embedState.image) embed.image = { url: embedState.image };
-          if (embedState.fields && embedState.fields.length > 0) {
-            embed.fields = embedState.fields;
-          }
-          if (embedState.timestamp) embed.timestamp = embedState.timestamp;
-          if (embedState.url) embed.url = embedState.url;
-
-          return embed;
-        });
-      }
-
-      if (usePoll) {
-        if (!pollQuestion.trim()) {
-          throw new Error("Poll question cannot be empty");
-        }
-        if (pollAnswers.some((a) => !a.text.trim())) {
-          throw new Error("All poll answers must have text");
-        }
-        if (pollAnswers.length < 2) {
-          throw new Error("Poll must have at least 2 answers");
-        }
-
-        payload.poll = {
-          question: { text: pollQuestion },
-          answers: pollAnswers.map((a) => ({ poll_media: { text: a.text } })),
-          allow_multiselect: pollAllowMultiselect,
-          duration: pollDuration,
-          layout_type: 1,
-        };
-      }
-
-      const finalPayload = useTTS ? { ...payload, tts: true } : payload;
-      const { body, headers } = buildRequestInit(finalPayload, files);
-
-      const url = new URL(webhookUrl);
-      if (threadId) {
-        url.searchParams.append("thread_id", threadId);
-      }
-
-      const response = await fetch(url.toString(), {
-        method: "POST",
-        headers,
-        body,
-      });
-
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response));
-      }
-
-      const historyItem: WebhookHistoryItem = {
-        timestamp: new Date().toISOString(),
-        payload,
-        webhookUrl,
-      };
-
-      const newHistory = [historyItem, ...history].slice(0, 50);
-      setHistory(newHistory);
-      localStorage.setItem("webhookHistory", JSON.stringify(newHistory));
-
-      toast.success("Webhook sent", {
-        description: "Your message has been sent successfully",
-      });
-    } catch (error) {
-      toast.error("Error sending webhook", {
-        description: error instanceof Error ? error.message : String(error),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const startSpam = async () => {
-    setIsSpamming(true);
-    spamRef.current.stop = false;
+  const buildPayload = (): WebhookPayload => {
     const payload: WebhookPayload = {};
     if (username) payload.username = username;
     if (avatarUrl) payload.avatar_url = avatarUrl;
     if (content) payload.content = content;
 
     let flags = 0;
-    if (suppressEmbeds) flags |= 1 << 2;
-    if (silentMessage) flags |= 1 << 12;
+    if (suppressEmbeds) flags |= FLAG_SUPPRESS_EMBEDS;
+    if (silentMessage) flags |= FLAG_SILENT;
     if (flags > 0) payload.flags = flags;
 
-    if (useEmbed) {
-      payload.embeds = embeds.map((embedState) => {
-        const embed: WebhookEmbed = {};
-        if (embedState.title) embed.title = embedState.title;
-        if (embedState.description) embed.description = embedState.description;
-        if (embedState.color)
-          embed.color = Number.parseInt(embedState.color.replace("#", ""), 16);
-        if (embedState.author) {
-          embed.author = { name: embedState.author };
-          if (embedState.authorIcon)
-            embed.author.icon_url = embedState.authorIcon;
-        }
-        if (embedState.footer) {
-          embed.footer = { text: embedState.footer };
-          if (embedState.footerIcon)
-            embed.footer.icon_url = embedState.footerIcon;
-        }
-        if (embedState.thumbnail)
-          embed.thumbnail = { url: embedState.thumbnail };
-        if (embedState.image) embed.image = { url: embedState.image };
-        if (embedState.fields && embedState.fields.length > 0) {
-          embed.fields = embedState.fields;
-        }
-        if (embedState.timestamp) embed.timestamp = embedState.timestamp;
-        if (embedState.url) embed.url = embedState.url;
-        return embed;
-      });
-    }
+    if (useEmbed) payload.embeds = embeds.map(stateToEmbed);
 
     if (usePoll) {
-      if (!pollQuestion.trim()) {
-        toast.error("Poll Error", {
-          description: "Poll question cannot be empty",
-        });
-        setIsSpamming(false);
-        spamRef.current.stop = true;
-        return;
-      }
+      if (!pollQuestion.trim())
+        throw new Error("Poll question cannot be empty");
       if (pollAnswers.some((a) => !a.text.trim())) {
-        toast.error("Poll Error", {
-          description: "All poll answers must have text",
-        });
-        setIsSpamming(false);
-        spamRef.current.stop = true;
-        return;
+        throw new Error("All poll answers must have text");
       }
-      if (pollAnswers.length < 2) {
-        toast.error("Poll Error", {
-          description: "Poll must have at least 2 answers",
-        });
-        setIsSpamming(false);
-        spamRef.current.stop = true;
-        return;
-      }
-
+      if (pollAnswers.length < 2)
+        throw new Error("Poll must have at least 2 answers");
       payload.poll = {
         question: { text: pollQuestion },
         answers: pollAnswers.map((a) => ({ poll_media: { text: a.text } })),
@@ -521,6 +243,239 @@ export default function WebhookTool() {
         layout_type: 1,
       };
     }
+
+    payload.allowed_mentions = { parse: mentions };
+    if (useTTS) payload.tts = true;
+    return payload;
+  };
+
+  const previewPayload = (): WebhookPayload => {
+    try {
+      return buildPayload();
+    } catch {
+      return {
+        content,
+        embeds: useEmbed ? embeds.map(stateToEmbed) : undefined,
+      };
+    }
+  };
+
+  const applyPayload = (payload: WebhookPayload) => {
+    setContent(payload.content ?? "");
+    if (payload.username !== undefined) setUsername(payload.username);
+    if (payload.avatar_url !== undefined) setAvatarUrl(payload.avatar_url);
+    const loadedEmbeds = (payload.embeds ?? []).slice(0, 10).map(embedToState);
+    setEmbeds(loadedEmbeds.length ? loadedEmbeds : [makeEmbed()]);
+    setActiveEmbedIndex(0);
+    setUseEmbed(loadedEmbeds.length > 0);
+    setUsePoll(Boolean(payload.poll));
+    if (payload.poll) {
+      setPollQuestion(payload.poll.question?.text ?? "");
+      setPollAnswers(
+        (payload.poll.answers ?? []).map((a) => ({
+          text: a.poll_media?.text ?? "",
+        })),
+      );
+      setPollAllowMultiselect(Boolean(payload.poll.allow_multiselect));
+      setPollDuration(payload.poll.duration ?? 24);
+    }
+    setUseTTS(Boolean(payload.tts));
+    setSuppressEmbeds(Boolean((payload.flags ?? 0) & FLAG_SUPPRESS_EMBEDS));
+    setSilentMessage(Boolean((payload.flags ?? 0) & FLAG_SILENT));
+    if (payload.allowed_mentions?.parse)
+      setMentions(payload.allowed_mentions.parse);
+  };
+
+  const saveHistory = (next: WebhookHistoryItem[]) => {
+    setHistory(next);
+    if (!writeJson("webhookHistory", next)) {
+      toast.error("Could not save the history in this browser");
+    }
+  };
+
+  const sendWebhook = async () => {
+    setLoading(true);
+    try {
+      const payload = buildPayload();
+
+      if (editing) {
+        const {
+          username: _u,
+          avatar_url: _a,
+          poll: _p,
+          tts: _t,
+          ...editable
+        } = payload;
+        const response = await fetch(
+          messageUrl(editing.webhookUrl, editing.messageId, editing.threadId),
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(editable),
+          },
+        );
+        if (!response.ok) throw new Error(await readErrorMessage(response));
+        saveHistory(
+          history.map((item) =>
+            item.messageId === editing.messageId
+              ? {
+                  ...item,
+                  payload: { ...item.payload, ...editable },
+                  edited: true,
+                }
+              : item,
+          ),
+        );
+        setEditing(null);
+        toast.success("Message updated", {
+          description: "The message in Discord now matches the composer.",
+        });
+        return;
+      }
+
+      const { body, headers } = buildRequestInit(payload, files);
+      const url = new URL(webhookUrl);
+      url.searchParams.set("wait", "true");
+      if (threadId) url.searchParams.set("thread_id", threadId);
+
+      const response = await fetch(url.toString(), {
+        method: "POST",
+        headers,
+        body,
+      });
+      if (!response.ok) throw new Error(await readErrorMessage(response));
+      const message: { id?: string; channel_id?: string } = await response
+        .json()
+        .catch(() => ({}));
+
+      const historyItem: WebhookHistoryItem = {
+        timestamp: new Date().toISOString(),
+        payload,
+        webhookUrl,
+        messageId: message.id,
+        channelId: message.channel_id,
+        threadId: threadId || undefined,
+      };
+      saveHistory([historyItem, ...history].slice(0, 50));
+      toast.success("Webhook sent", {
+        description: "Your message has been sent successfully",
+      });
+    } catch (error) {
+      toast.error(
+        editing ? "Error updating message" : "Error sending webhook",
+        {
+          description: error instanceof Error ? error.message : String(error),
+        },
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startEditing = (item: WebhookHistoryItem) => {
+    if (!item.messageId) return;
+    setWebhookUrl(item.webhookUrl);
+    setThreadId(item.threadId ?? "");
+    applyPayload(item.payload);
+    setFiles([]);
+    setUseSpam(false);
+    setEditing({
+      webhookUrl: item.webhookUrl,
+      messageId: item.messageId,
+      threadId: item.threadId,
+    });
+    setActiveTab("message");
+    toast.info("Editing a sent message", {
+      description: "Change it in the composer, then press Update message.",
+    });
+  };
+
+  const deleteMessage = async (item: WebhookHistoryItem) => {
+    if (!item.messageId) return;
+    try {
+      const response = await fetch(
+        messageUrl(item.webhookUrl, item.messageId, item.threadId),
+        { method: "DELETE" },
+      );
+      if (!response.ok && response.status !== 404) {
+        throw new Error(await readErrorMessage(response));
+      }
+      saveHistory(
+        history.map((entry) =>
+          entry.messageId === item.messageId
+            ? { ...entry, deleted: true }
+            : entry,
+        ),
+      );
+      if (editing?.messageId === item.messageId) setEditing(null);
+      toast.success("Message deleted", {
+        description: "It has been removed from Discord.",
+      });
+    } catch (error) {
+      toast.error("Could not delete the message", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const loadMessage = async () => {
+    const ref = parseMessageRef(messageRef);
+    if (!ref) {
+      toast.error("Paste a message ID or a message link");
+      return;
+    }
+    if (!webhookUrl) {
+      toast.error("Enter the webhook URL that sent the message");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(
+        messageUrl(webhookUrl, ref.messageId, threadId || undefined),
+      );
+      if (!response.ok) {
+        throw new Error(
+          response.status === 404
+            ? "No such message from this webhook. A webhook can only load messages it sent."
+            : await readErrorMessage(response),
+        );
+      }
+      const message: WebhookPayload & { id: string; channel_id: string } =
+        await response.json();
+      startEditing({
+        timestamp: new Date().toISOString(),
+        payload: {
+          content: message.content,
+          embeds: message.embeds,
+          flags: message.flags,
+        },
+        webhookUrl,
+        messageId: message.id,
+        channelId: message.channel_id,
+        threadId: threadId || undefined,
+      });
+      setMessageRef("");
+    } catch (error) {
+      toast.error("Could not load the message", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startSpam = async () => {
+    let payload: WebhookPayload;
+    try {
+      payload = buildPayload();
+    } catch (error) {
+      toast.error("Poll Error", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+      return;
+    }
+    setIsSpamming(true);
+    spamRef.current.stop = false;
 
     const spam = async () => {
       toast.info("Spamming started", {
@@ -533,8 +488,7 @@ export default function WebhookTool() {
             url.searchParams.append("thread_id", threadId);
           }
 
-          const finalPayload = useTTS ? { ...payload, tts: true } : payload;
-          const { body, headers } = buildRequestInit(finalPayload, files);
+          const { body, headers } = buildRequestInit(payload, files);
 
           const response = await fetch(url.toString(), {
             method: "POST",
@@ -563,7 +517,6 @@ export default function WebhookTool() {
     };
     void spam();
   };
-
   const stopSpam = () => {
     spamRef.current.stop = true;
     setIsSpamming(false);
@@ -676,1136 +629,745 @@ export default function WebhookTool() {
     );
   };
 
-  return (
-    <main>
-      <div aria-hidden className="absolute inset-0 isolate contain-strict">
-        <div className="w-140 h-320 -translate-y-87.5 absolute left-0 top-0 -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,hsla(0,0%,85%,.08)_0,hsla(0,0%,55%,.02)_50%,hsla(0,0%,45%,0)_80%)]" />
-        <div className="h-320 absolute left-0 top-0 w-60 -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.06)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)] [translate:5%_-50%]" />
-        <div className="h-320 -translate-y-87.5 absolute left-0 top-0 w-60 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.04)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
+  const deleteRemoteWebhook = async () => {
+    if (!webhookUrl) return;
+    try {
+      const response = await fetch(webhookUrl, { method: "DELETE" });
+      if (!response.ok) throw new Error(await readErrorMessage(response));
+      setWebhookUrl("");
+      toast.success("Webhook deleted", {
+        description: "The webhook has been deleted from Discord.",
+      });
+    } catch (error) {
+      toast.error("Failed to delete webhook", {
+        description: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const webhookId = /\/webhooks\/(\d+)\//.exec(webhookUrl)?.[1];
+  const hasMessage = Boolean(
+    content || useEmbed || usePoll || files.length > 0,
+  );
+  const optionNotes = [
+    useTTS && "TTS",
+    silentMessage && "silent",
+    suppressEmbeds && "no link embeds",
+    !mentions.includes("everyone") && "no @everyone",
+    useSpam && "spam",
+  ].filter(Boolean);
+
+  const webhookField = (
+    <Field label="Webhook URL" htmlFor="webhook-url">
+      <div className="flex gap-2">
+        <Input
+          id="webhook-url"
+          type="password"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="https://discord.com/api/webhooks/…"
+          className="font-mono text-sm"
+          value={webhookUrl}
+          onChange={(e) => setWebhookUrl(e.target.value.trim())}
+          disabled={isSpamming}
+        />
+        {savedWebhooks.length > 0 && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={mono} disabled={isSpamming}>
+                Saved
+                <ChevronDown />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 p-1">
+              <ul className="max-h-72 overflow-auto">
+                {savedWebhooks.map((webhook) => (
+                  <li key={webhook.url}>
+                    <button
+                      type="button"
+                      className="w-full cursor-pointer truncate rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
+                      onClick={() => selectWebhook(webhook.url)}
+                    >
+                      {webhook.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </PopoverContent>
+          </Popover>
+        )}
       </div>
-      <div className="mx-auto max-w-5xl py-8 relative px-6 lg:px-0">
-        <h1 className="text-3xl font-bold mb-6 text-center">
-          Discord Webhook Multi-Tool
-        </h1>
+    </Field>
+  );
 
-        <Tabs
-          defaultValue="message"
-          value={activeTab}
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-4 bg-muted/80">
-            <TabsTrigger value="message" className="backdrop">
-              Message
-            </TabsTrigger>
-            <TabsTrigger value="edit">Edit</TabsTrigger>
-            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-          </TabsList>
+  return (
+    <div className="relative mx-auto max-w-5xl px-6 pb-16 xl:px-1">
+      <PageIntro
+        title="Webhook Multitool"
+        github="https://github.com/Uncover-it/webhook-multitool"
+        info={
+          webhookId ? (
+            <>
+              Webhook: <span className="font-mono">{webhookId}</span>
+            </>
+          ) : (
+            "Send, edit and delete Discord webhook messages."
+          )
+        }
+      />
 
-          <TabsContent value="message" className="space-y-4 mt-4">
-            <Card className="backdrop-blur-3xl bg-background/10">
-              <CardHeader>
-                <CardTitle>Webhook Configuration</CardTitle>
-                <CardDescription>
-                  Enter your webhook URL and customize the sender
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="webhook-url"
-                      placeholder="https://discord.com/api/webhooks/..."
-                      value={webhookUrl}
-                      onChange={(e) => setWebhookUrl(e.target.value)}
-                      disabled={isSpamming}
-                    />
-                    {savedWebhooks.length > 0 && (
-                      <div className="relative">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full">
-                              Saved
+      <ToolTabs
+        className="mt-8"
+        value={activeTab}
+        onChange={setActiveTab}
+        disabled={(tab) => isSpamming && tab !== "message"}
+        tabs={[
+          { value: "message", label: "Message" },
+          { value: "edit", label: "Edit" },
+          { value: "webhooks", label: "Webhooks", count: savedWebhooks.length },
+          { value: "history", label: "History", count: history.length },
+        ]}
+      />
+
+      {activeTab === "message" && (
+        <>
+          <Section
+            title="Message"
+            description={
+              editing
+                ? "Editing a message that was already sent"
+                : "Compose the message and who it comes from"
+            }
+            actions={
+              editing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={mono}
+                  onClick={() => setEditing(null)}
+                >
+                  <X />
+                  Stop editing
+                </Button>
+              )
+            }
+          >
+            {editing && (
+              <Panel className="text-muted-foreground">
+                Changing message{" "}
+                <span className="font-mono text-foreground">
+                  {editing.messageId}
+                </span>
+                . Its text, embeds and mentions can change; the sender, poll and
+                files can&apos;t.
+              </Panel>
+            )}
+            <Panel className="space-y-4">
+              {webhookField}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Field label="Username" htmlFor="username">
+                  <Input
+                    id="username"
+                    placeholder="Webhook's own name"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={isSpamming || editing !== null}
+                  />
+                </Field>
+                <Field label="Avatar URL" htmlFor="avatar-url">
+                  <Input
+                    id="avatar-url"
+                    placeholder="https://example.com/avatar.png"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    disabled={isSpamming || editing !== null}
+                  />
+                </Field>
+                <Field label="Thread ID" htmlFor="thread-id">
+                  <Input
+                    id="thread-id"
+                    placeholder="Only for threads"
+                    className="font-mono text-sm"
+                    value={threadId}
+                    onChange={(e) => setThreadId(e.target.value.trim())}
+                    disabled={isSpamming}
+                  />
+                </Field>
+              </div>
+            </Panel>
+
+            <Panel>
+              <Field
+                label="Content"
+                htmlFor="content"
+                aside={
+                  <span
+                    className={
+                      content.length > 2000 ? "text-destructive" : undefined
+                    }
+                  >
+                    {content.length}/2000
+                  </span>
+                }
+              >
+                <Textarea
+                  id="content"
+                  placeholder="Markdown works: **bold**, *italic*, `code`, ||spoiler||, <t:1700000000:R>"
+                  className="min-h-28 font-mono text-sm"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  disabled={isSpamming}
+                />
+              </Field>
+
+              <Accordion type="multiple" className="mt-2">
+                <AccordionItem value="files">
+                  <AccordionTrigger className="py-2 text-lg font-semibold">
+                    <TriggerLabel title="Attachments" count={files.length} />
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-2">
+                    {files.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {files.map((file, index) => (
+                          <span
+                            key={file.name + file.size}
+                            className="inline-flex max-w-full items-center gap-1 rounded-md border bg-background/10 py-0.5 pr-0.5 pl-2 font-mono text-xs shadow-inner"
+                          >
+                            <span className="truncate">{file.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              className="size-6"
+                              aria-label={`Remove ${file.name}`}
+                              onClick={() =>
+                                setFiles(files.filter((_, i) => i !== index))
+                              }
+                            >
+                              <X />
                             </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-56 p-0">
-                            <div className="max-h-75 overflow-auto">
-                              {savedWebhooks.map((webhook, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-center justify-between p-2 hover:bg-muted"
-                                >
-                                  <button
-                                    type="button"
-                                    className="flex-1 truncate text-left cursor-pointer"
-                                    onClick={() => selectWebhook(webhook.url)}
-                                  >
-                                    {webhook.name}
-                                  </button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => deleteWebhook(index)}
-                                  >
-                                    <Trash2 className="size-4" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                          </span>
+                        ))}
                       </div>
                     )}
-                  </div>
-                </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={mono}
+                        onClick={() =>
+                          document.getElementById("file-upload")?.click()
+                        }
+                        disabled={
+                          isSpamming || editing !== null || files.length >= 10
+                        }
+                      >
+                        <Paperclip />
+                        Add files
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Up to 10 files, 25 MB in total
+                      </span>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            const added = Array.from(e.target.files);
+                            if (files.length + added.length > 10) {
+                              toast.error("Limit Exceeded", {
+                                description:
+                                  "You can only attach up to 10 files.",
+                              });
+                            } else {
+                              setFiles([...files, ...added]);
+                            }
+                          }
+                          e.target.value = "";
+                        }}
+                      />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">
-                      Override Username (optional)
-                    </Label>
-                    <Input
-                      id="username"
-                      placeholder="Custom Bot Name"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      disabled={isSpamming}
+                <AccordionItem value="embeds">
+                  <AccordionTrigger className="py-2 text-lg font-semibold">
+                    <TriggerLabel
+                      title="Embeds"
+                      count={useEmbed ? embeds.length : undefined}
+                      note={useEmbed ? undefined : "off"}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="avatar-url">Avatar URL (optional)</Label>
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="use-embed"
+                        checked={useEmbed}
+                        onCheckedChange={setUseEmbed}
+                        disabled={isSpamming}
+                      />
+                      <label htmlFor="use-embed">
+                        Send embeds with this message
+                      </label>
+                    </div>
+                    {useEmbed && (
+                      <EmbedEditor
+                        embeds={embeds}
+                        active={activeEmbedIndex}
+                        onActive={setActiveEmbedIndex}
+                        onAdd={addEmbed}
+                        onRemove={removeEmbed}
+                        onChange={updateEmbed}
+                        onAddField={addField}
+                        onRemoveField={removeField}
+                        onChangeField={updateField}
+                        disabled={isSpamming}
+                      />
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="poll">
+                  <AccordionTrigger className="py-2 text-lg font-semibold">
+                    <TriggerLabel
+                      title="Poll"
+                      note={usePoll ? `${pollAnswers.length} answers` : "off"}
+                    />
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="use-poll"
+                        checked={usePoll}
+                        onCheckedChange={setUsePoll}
+                        disabled={isSpamming || editing !== null}
+                      />
+                      <label htmlFor="use-poll">Attach a poll</label>
+                    </div>
+                    {usePoll && (
+                      <PollEditor
+                        question={pollQuestion}
+                        onQuestion={setPollQuestion}
+                        answers={pollAnswers}
+                        onAnswer={updatePollAnswer}
+                        onAddAnswer={addPollAnswer}
+                        onRemoveAnswer={removePollAnswer}
+                        multiselect={pollAllowMultiselect}
+                        onMultiselect={setPollAllowMultiselect}
+                        duration={pollDuration}
+                        onDuration={setPollDuration}
+                        disabled={isSpamming}
+                      />
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="options">
+                  <AccordionTrigger className="py-2 text-lg font-semibold">
+                    <TriggerLabel
+                      title="Options"
+                      note={optionNotes.join(" · ")}
+                    />
+                  </AccordionTrigger>
+                  <AccordionContent className="space-y-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {(
+                        [
+                          [
+                            "use-tts",
+                            "Read aloud (TTS)",
+                            useTTS,
+                            setUseTTS,
+                            editing !== null,
+                          ],
+                          [
+                            "silent-message",
+                            "Silent, no notification",
+                            silentMessage,
+                            setSilentMessage,
+                            false,
+                          ],
+                          [
+                            "suppress-embeds",
+                            "Hide link embeds",
+                            suppressEmbeds,
+                            setSuppressEmbeds,
+                            useEmbed,
+                          ],
+                          [
+                            "spam",
+                            "Spam until stopped",
+                            useSpam,
+                            setUseSpam,
+                            editing !== null,
+                          ],
+                        ] as const
+                      ).map(([id, label, checked, set, off]) => (
+                        <div key={id} className="flex items-center gap-2">
+                          <Switch
+                            id={id}
+                            checked={checked}
+                            onCheckedChange={set}
+                            disabled={isSpamming || off}
+                          />
+                          <label htmlFor={id}>{label}</label>
+                        </div>
+                      ))}
+                    </div>
+                    <Field
+                      label="Mentions that ping"
+                      hint="Mentions that are switched off still show in the message, they just don't notify anyone."
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {(
+                          [
+                            ["users", "Users"],
+                            ["roles", "Roles"],
+                            ["everyone", "@everyone & @here"],
+                          ] as const
+                        ).map(([kind, label]) => {
+                          const on = mentions.includes(kind);
+                          return (
+                            <button
+                              key={kind}
+                              type="button"
+                              aria-pressed={on}
+                              disabled={isSpamming}
+                              onClick={() =>
+                                setMentions(
+                                  on
+                                    ? mentions.filter((m) => m !== kind)
+                                    : [...mentions, kind],
+                                )
+                              }
+                              className={`h-7 cursor-pointer rounded-md border px-2.5 font-mono text-xs tracking-tight disabled:pointer-events-none disabled:opacity-50 ${
+                                on
+                                  ? kind === "everyone"
+                                    ? "border-destructive bg-destructive text-white"
+                                    : "border-foreground bg-foreground text-background"
+                                  : "text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </Field>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </Panel>
+
+            <Actions>
+              <Button
+                variant="outline"
+                size="sm"
+                className={mono}
+                onClick={clearForm}
+                disabled={isSpamming}
+              >
+                Clear
+              </Button>
+              <PayloadTools
+                payload={previewPayload()}
+                onImport={(payload) => {
+                  applyPayload(payload);
+                  setActiveTab("message");
+                }}
+              />
+              {useSpam && !editing ? (
+                isSpamming ? (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className={mono}
+                    onClick={stopSpam}
+                  >
+                    <CircleStop />
+                    Stop spam
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className={mono}
+                    onClick={startSpam}
+                    disabled={loading || !webhookUrl || !hasMessage}
+                  >
+                    <Play />
+                    Start spam
+                  </Button>
+                )
+              ) : (
+                <Button
+                  size="sm"
+                  className={mono}
+                  onClick={sendWebhook}
+                  disabled={loading || !webhookUrl || !hasMessage}
+                >
+                  <Send />
+                  {editing
+                    ? loading
+                      ? "Updating…"
+                      : "Update message"
+                    : loading
+                      ? "Sending…"
+                      : "Send"}
+                </Button>
+              )}
+            </Actions>
+          </Section>
+
+          <Section
+            title="Preview"
+            description="How the message will look in Discord"
+          >
+            <DiscordPreview
+              username={username}
+              avatarUrl={avatarUrl}
+              content={content}
+              files={files}
+              embeds={useEmbed ? embeds : []}
+              poll={
+                usePoll
+                  ? {
+                      question: pollQuestion,
+                      answers: pollAnswers,
+                      allowMultiselect: pollAllowMultiselect,
+                      duration: pollDuration,
+                    }
+                  : undefined
+              }
+            />
+          </Section>
+        </>
+      )}
+
+      {activeTab === "edit" && (
+        <>
+          <Section
+            title="Webhook"
+            description="Rename the webhook, change its picture, or delete it"
+          >
+            <Panel className="space-y-4">
+              {webhookField}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="New name" htmlFor="edit-username">
+                  <Input
+                    id="edit-username"
+                    placeholder="Leave empty to keep it"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    disabled={isSpamming}
+                  />
+                </Field>
+                <Field label="New avatar URL" htmlFor="edit-avatar">
+                  <div className="flex items-center gap-2">
                     <Input
-                      id="avatar-url"
+                      id="edit-avatar"
                       placeholder="https://example.com/avatar.png"
                       value={avatarUrl}
                       onChange={(e) => setAvatarUrl(e.target.value)}
                       disabled={isSpamming}
                     />
+                    <Avatar className="size-9 shrink-0">
+                      {avatarUrl && <AvatarImage src={avatarUrl} alt="" />}
+                      <AvatarFallback>
+                        {(username || "W").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="thread-id">Thread ID (optional)</Label>
+                </Field>
+              </div>
+            </Panel>
+            <Actions>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={mono}
+                    disabled={!webhookUrl}
+                  >
+                    <Trash2 />
+                    Delete webhook
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete this webhook?</DialogTitle>
+                    <DialogDescription>
+                      This removes the webhook from Discord for good. Nothing
+                      can be sent through it afterwards, and it can&apos;t be
+                      undone.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button variant="outline" size="sm" className={mono}>
+                        Keep it
+                      </Button>
+                    </DialogClose>
+                    <DialogClose asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className={mono}
+                        onClick={deleteRemoteWebhook}
+                      >
+                        Delete
+                      </Button>
+                    </DialogClose>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              <Button
+                size="sm"
+                className={mono}
+                onClick={editWebhook}
+                disabled={loading || !webhookUrl || (!username && !avatarUrl)}
+              >
+                <Save />
+                {loading ? "Saving…" : "Save changes"}
+              </Button>
+            </Actions>
+          </Section>
+
+          <Section
+            title="Sent message"
+            description="Load a message this webhook sent, by ID or message link, to change it"
+          >
+            <Panel>
+              <Field
+                label="Message ID or link"
+                htmlFor="message-ref"
+                hint="Right-click the message in Discord, then Copy Message Link. Fill in the thread ID on the Message tab if it is in a thread."
+              >
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
-                    id="thread-id"
-                    placeholder="123456789012345678"
-                    value={threadId}
-                    onChange={(e) => setThreadId(e.target.value)}
-                    disabled={isSpamming}
+                    id="message-ref"
+                    placeholder="https://discord.com/channels/…/…/…"
+                    className="font-mono text-sm"
+                    value={messageRef}
+                    onChange={(e) => setMessageRef(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && loadMessage()}
                   />
-                  <p className="text-[0.8rem] text-muted-foreground">
-                    Send message into a specific thread (must be created first)
-                  </p>
+                  <Button
+                    variant="outline"
+                    className={mono}
+                    onClick={loadMessage}
+                    disabled={loading || !messageRef.trim() || !webhookUrl}
+                  >
+                    Load message
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </Field>
+            </Panel>
+          </Section>
+        </>
+      )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Message Content</CardTitle>
-                    <CardDescription>
-                      Compose your webhook message
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="content">Text Message</Label>
-                      <Textarea
-                        id="content"
-                        placeholder="Enter your message here..."
-                        className="min-h-25"
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        disabled={isSpamming}
-                      />
-
-                      <div className="space-y-2">
-                        <Label>Attachments</Label>
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {files.map((file, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md text-sm border"
-                            >
-                              <span className="truncate max-w-37.5">
-                                {file.name}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-4 w-4 rounded-full"
-                                onClick={() => {
-                                  const newFiles = [...files];
-                                  newFiles.splice(index, 1);
-                                  setFiles(newFiles);
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              document.getElementById("file-upload")?.click()
-                            }
-                            disabled={isSpamming || files.length >= 10}
-                          >
-                            <Paperclip className="size-4 mr-2" />
-                            Add Files
-                          </Button>
-                          <input
-                            id="file-upload"
-                            type="file"
-                            multiple
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files) {
-                                const newFiles = Array.from(e.target.files);
-                                if (files.length + newFiles.length > 10) {
-                                  toast.error("Limit Exceeded", {
-                                    description:
-                                      "You can only attach up to 10 files.",
-                                  });
-                                  return;
-                                }
-                                setFiles([...files, ...newFiles]);
-                              }
-                              e.target.value = "";
-                            }}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Max 10 files, 25MB total (default Discord limit)
-                          </p>
-                        </div>
-                      </div>
+      {activeTab === "webhooks" && (
+        <Section title="Saved webhooks" description="Kept in this browser only">
+          <Panel>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+              <Field label="Name" htmlFor="webhook-name">
+                <Input
+                  id="webhook-name"
+                  placeholder="My server"
+                  value={webhookName}
+                  onChange={(e) => setWebhookName(e.target.value)}
+                />
+              </Field>
+              <Field label="Webhook URL" htmlFor="webhook-url-save">
+                <Input
+                  id="webhook-url-save"
+                  type="password"
+                  autoComplete="off"
+                  placeholder="https://discord.com/api/webhooks/…"
+                  className="font-mono text-sm"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value.trim())}
+                />
+              </Field>
+              <Button className={mono} onClick={saveWebhook}>
+                <Save />
+                Save
+              </Button>
+            </div>
+          </Panel>
+          {savedWebhooks.length === 0 ? (
+            <div className="my-2">
+              <Empty>No saved webhooks yet.</Empty>
+            </div>
+          ) : (
+            <Panel className="p-2">
+              <ul>
+                {savedWebhooks.map((webhook, index) => (
+                  <li
+                    key={webhook.url}
+                    className="flex flex-wrap items-center gap-2 border-b border-dashed border-border/60 px-2 py-2 last:border-b-0 dark:border-border/30"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{webhook.name}</p>
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {/\/webhooks\/(\d+)\//.exec(webhook.url)?.[1] ??
+                          "webhook"}
+                      </p>
                     </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="use-embed"
-                          checked={useEmbed}
-                          onCheckedChange={setUseEmbed}
-                          disabled={isSpamming}
-                        />
-                        <Label htmlFor="use-embed">Include Embed</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="use-poll"
-                          checked={usePoll}
-                          onCheckedChange={setUsePoll}
-                          disabled={isSpamming}
-                        />
-                        <Label htmlFor="use-poll">Poll</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="use-tts"
-                          checked={useTTS}
-                          onCheckedChange={setUseTTS}
-                          disabled={isSpamming}
-                        />
-                        <Label htmlFor="use-tts">TTS</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="suppress-embeds"
-                          checked={suppressEmbeds}
-                          onCheckedChange={setSuppressEmbeds}
-                          disabled={isSpamming || useEmbed}
-                        />
-                        <Label htmlFor="suppress-embeds">Hide Embeds</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="silent-message"
-                          checked={silentMessage}
-                          onCheckedChange={setSilentMessage}
-                          disabled={isSpamming}
-                        />
-                        <Label htmlFor="silent-message">Silent</Label>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="spam"
-                          checked={useSpam}
-                          onCheckedChange={setUseSpam}
-                          disabled={isSpamming}
-                        />
-                        <Label htmlFor="spam">Spam</Label>
-                      </div>
-                    </div>
-
-                    {usePoll && (
-                      <Card className="p-4 space-y-4">
-                        <div className="space-y-2">
-                          <Label>Poll Question</Label>
-                          <Input
-                            value={pollQuestion}
-                            onChange={(e) => setPollQuestion(e.target.value)}
-                            placeholder="What is your favorite color?"
-                            disabled={isSpamming}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Answers (Min 2, Max 10)</Label>
-                          {pollAnswers.map((answer, index) => (
-                            <div key={index} className="flex gap-2">
-                              <Input
-                                value={answer.text}
-                                onChange={(e) =>
-                                  updatePollAnswer(index, e.target.value)
-                                }
-                                placeholder={`Option ${index + 1}`}
-                                disabled={isSpamming}
-                              />
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => removePollAnswer(index)}
-                                disabled={pollAnswers.length <= 1 || isSpamming}
-                                className="h-10 w-10"
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          ))}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={addPollAnswer}
-                            disabled={pollAnswers.length >= 10 || isSpamming}
-                            className="w-full"
-                          >
-                            <Plus className="size-4 mr-2" /> Add Answer
-                          </Button>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              id="poll-multiselect"
-                              checked={pollAllowMultiselect}
-                              onCheckedChange={setPollAllowMultiselect}
-                              disabled={isSpamming}
-                            />
-                            <Label htmlFor="poll-multiselect">
-                              Allow Multiple Answers
-                            </Label>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Duration</Label>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                asChild
-                                disabled={isSpamming}
-                              >
-                                <Button
-                                  variant="outline"
-                                  className="w-35 h-8 justify-between"
-                                  disabled={isSpamming}
-                                >
-                                  {pollDuration === 1
-                                    ? "1 Hour"
-                                    : pollDuration === 4
-                                      ? "4 Hours"
-                                      : pollDuration === 8
-                                        ? "8 Hours"
-                                        : pollDuration === 24
-                                          ? "24 Hours"
-                                          : pollDuration === 72
-                                            ? "3 Days"
-                                            : "1 Week"}
-                                  <ChevronDown className="h-4 w-4 opacity-50" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start">
-                                <DropdownMenuRadioGroup
-                                  value={pollDuration.toString()}
-                                  onValueChange={(val) =>
-                                    setPollDuration(Number.parseInt(val, 10))
-                                  }
-                                >
-                                  <DropdownMenuRadioItem value="1">
-                                    1 Hour
-                                  </DropdownMenuRadioItem>
-                                  <DropdownMenuRadioItem value="4">
-                                    4 Hours
-                                  </DropdownMenuRadioItem>
-                                  <DropdownMenuRadioItem value="8">
-                                    8 Hours
-                                  </DropdownMenuRadioItem>
-                                  <DropdownMenuRadioItem value="24">
-                                    24 Hours
-                                  </DropdownMenuRadioItem>
-                                  <DropdownMenuRadioItem value="72">
-                                    3 Days
-                                  </DropdownMenuRadioItem>
-                                  <DropdownMenuRadioItem value="168">
-                                    1 Week
-                                  </DropdownMenuRadioItem>
-                                </DropdownMenuRadioGroup>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
-                      </Card>
-                    )}
-
-                    {useEmbed && (
-                      <div className="space-y-4 pt-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex gap-2 overflow-x-auto pb-2 max-w-[calc(100%-100px)]">
-                            {embeds.map((_, index) => (
-                              <Button
-                                key={index}
-                                variant={
-                                  activeEmbedIndex === index
-                                    ? "default"
-                                    : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setActiveEmbedIndex(index)}
-                                className="whitespace-nowrap"
-                              >
-                                Embed {index + 1}
-                              </Button>
-                            ))}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => removeEmbed(activeEmbedIndex)}
-                              disabled={embeds.length <= 1 || isSpamming}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={addEmbed}
-                              disabled={embeds.length >= 10 || isSpamming}
-                            >
-                              <Plus className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="embed-title">Embed Title</Label>
-                          <Input
-                            id="embed-title"
-                            placeholder="Embed Title"
-                            value={embeds[activeEmbedIndex].title}
-                            onChange={(e) =>
-                              updateEmbed(
-                                activeEmbedIndex,
-                                "title",
-                                e.target.value,
-                              )
-                            }
-                            disabled={isSpamming}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="embed-description">
-                            Embed Description
-                          </Label>
-                          <Textarea
-                            id="embed-description"
-                            placeholder="Embed description..."
-                            className="min-h-25"
-                            value={embeds[activeEmbedIndex].description}
-                            onChange={(e) =>
-                              updateEmbed(
-                                activeEmbedIndex,
-                                "description",
-                                e.target.value,
-                              )
-                            }
-                            disabled={isSpamming}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="embed-color">Embed Color</Label>
-                          <ColorPicker
-                            color={embeds[activeEmbedIndex].color}
-                            onChange={(color) =>
-                              updateEmbed(activeEmbedIndex, "color", color)
-                            }
-                          />
-                        </div>
-
-                        <Separator />
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="embed-author">Author Name</Label>
-                            <Input
-                              id="embed-author"
-                              placeholder="Author name"
-                              value={embeds[activeEmbedIndex].author}
-                              onChange={(e) =>
-                                updateEmbed(
-                                  activeEmbedIndex,
-                                  "author",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isSpamming}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="embed-author-icon">
-                              Author Icon URL
-                            </Label>
-                            <Input
-                              id="embed-author-icon"
-                              placeholder="https://example.com/icon.png"
-                              value={embeds[activeEmbedIndex].authorIcon}
-                              onChange={(e) =>
-                                updateEmbed(
-                                  activeEmbedIndex,
-                                  "authorIcon",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isSpamming}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="embed-footer">Footer Text</Label>
-                            <Input
-                              id="embed-footer"
-                              placeholder="Footer text"
-                              value={embeds[activeEmbedIndex].footer}
-                              onChange={(e) =>
-                                updateEmbed(
-                                  activeEmbedIndex,
-                                  "footer",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isSpamming}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="embed-footer-icon">
-                              Footer Icon URL
-                            </Label>
-                            <Input
-                              id="embed-footer-icon"
-                              placeholder="https://example.com/icon.png"
-                              value={embeds[activeEmbedIndex].footerIcon}
-                              onChange={(e) =>
-                                updateEmbed(
-                                  activeEmbedIndex,
-                                  "footerIcon",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isSpamming}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="embed-thumbnail">
-                              Thumbnail URL
-                            </Label>
-                            <Input
-                              id="embed-thumbnail"
-                              placeholder="https://example.com/thumbnail.png"
-                              value={embeds[activeEmbedIndex].thumbnail}
-                              onChange={(e) =>
-                                updateEmbed(
-                                  activeEmbedIndex,
-                                  "thumbnail",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isSpamming}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="embed-image">Image URL</Label>
-                            <Input
-                              id="embed-image"
-                              placeholder="https://example.com/image.png"
-                              value={embeds[activeEmbedIndex].image}
-                              onChange={(e) =>
-                                updateEmbed(
-                                  activeEmbedIndex,
-                                  "image",
-                                  e.target.value,
-                                )
-                              }
-                              disabled={isSpamming}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="embed-timestamp"
-                            checked={!!embeds[activeEmbedIndex].timestamp}
-                            onCheckedChange={(checked) =>
-                              updateEmbed(
-                                activeEmbedIndex,
-                                "timestamp",
-                                checked ? new Date().toISOString() : undefined,
-                              )
-                            }
-                            disabled={isSpamming}
-                          />
-                          <Label htmlFor="embed-timestamp">
-                            Include Timestamp
-                          </Label>
-                        </div>
-
-                        <Separator />
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label>Fields (Max 25)</Label>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => addField(activeEmbedIndex)}
-                              disabled={
-                                embeds[activeEmbedIndex].fields.length >= 25 ||
-                                isSpamming
-                              }
-                            >
-                              <Plus className="size-4 mr-1" /> Add Field
-                            </Button>
-                          </div>
-                          <div className="space-y-3">
-                            {embeds[activeEmbedIndex].fields.map(
-                              (field, index) => (
-                                <div
-                                  key={index}
-                                  className="border rounded-md p-3 space-y-3 relative"
-                                >
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 h-6 w-6"
-                                    onClick={() =>
-                                      removeField(activeEmbedIndex, index)
-                                    }
-                                    disabled={isSpamming}
-                                  >
-                                    <Trash2 className="size-3" />
-                                  </Button>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                      <Label
-                                        htmlFor={`field-name-${index}`}
-                                        className="text-xs"
-                                      >
-                                        Name
-                                      </Label>
-                                      <Input
-                                        id={`field-name-${index}`}
-                                        placeholder="Field Name"
-                                        value={field.name}
-                                        onChange={(e) =>
-                                          updateField(
-                                            activeEmbedIndex,
-                                            index,
-                                            "name",
-                                            e.target.value,
-                                          )
-                                        }
-                                        disabled={isSpamming}
-                                        className="h-8"
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <Label
-                                        htmlFor={`field-value-${index}`}
-                                        className="text-xs"
-                                      >
-                                        Value
-                                      </Label>
-                                      <Input
-                                        id={`field-value-${index}`}
-                                        placeholder="Field Value"
-                                        value={field.value}
-                                        onChange={(e) =>
-                                          updateField(
-                                            activeEmbedIndex,
-                                            index,
-                                            "value",
-                                            e.target.value,
-                                          )
-                                        }
-                                        disabled={isSpamming}
-                                        className="h-8"
-                                      />
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Switch
-                                      id={`field-inline-${index}`}
-                                      checked={field.inline}
-                                      onCheckedChange={(checked) =>
-                                        updateField(
-                                          activeEmbedIndex,
-                                          index,
-                                          "inline",
-                                          checked,
-                                        )
-                                      }
-                                      disabled={isSpamming}
-                                    />
-                                    <Label
-                                      htmlFor={`field-inline-${index}`}
-                                      className="text-xs"
-                                    >
-                                      Inline
-                                    </Label>
-                                  </div>
-                                </div>
-                              ),
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <Button
                       variant="outline"
-                      onClick={clearForm}
-                      disabled={isSpamming}
-                      className="w-full sm:w-auto"
+                      size="sm"
+                      className={mono}
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(webhook.url);
+                          toast.success("Copied to clipboard!");
+                        } catch {
+                          toast.error("Could not copy to clipboard");
+                        }
+                      }}
                     >
-                      Clear
+                      <Copy />
+                      Copy
                     </Button>
-                    <div className="flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            aria-label="Delete Webhook"
-                            variant="destructive"
-                            disabled={!webhookUrl}
-                            className="w-full sm:w-auto"
-                          >
-                            <Trash2 /> Delete Webhook
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Are you absolutely sure?</DialogTitle>
-                            <DialogDescription>
-                              This action cannot be undone. This will
-                              permanently delete the webhook from Discord and
-                              prevent any futher messages from being sent to it.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <DialogFooter>
-                            <DialogClose asChild>
-                              <Button
-                                type="button"
-                                size={"sm"}
-                                className="rounded-lg"
-                              >
-                                Close
-                              </Button>
-                            </DialogClose>
-                            <DialogClose asChild>
-                              <Button
-                                variant={"destructive"}
-                                size={"sm"}
-                                className="rounded-lg"
-                                onClick={async () => {
-                                  if (!webhookUrl) return;
-                                  try {
-                                    const response = await fetch(webhookUrl, {
-                                      method: "DELETE",
-                                    });
-                                    if (response.ok) {
-                                      setWebhookUrl("");
-                                      toast.success("Webhook deleted", {
-                                        description:
-                                          "The webhook has been deleted from Discord.",
-                                      });
-                                    } else {
-                                      toast.error("Failed to delete webhook", {
-                                        description: `Error: ${response.status} ${response.statusText}`,
-                                      });
-                                    }
-                                  } catch (error) {
-                                    toast.error("Error deleting webhook", {
-                                      description:
-                                        error instanceof Error
-                                          ? error.message
-                                          : "Unknown error occurred",
-                                    });
-                                  }
-                                }}
-                              >
-                                Delete
-                              </Button>
-                            </DialogClose>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                      {useSpam ? (
-                        isSpamming ? (
-                          <Button
-                            variant="destructive"
-                            onClick={stopSpam}
-                            className="w-full sm:w-auto"
-                          >
-                            <CircleStop className="size-4" />
-                            Stop Spam
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={startSpam}
-                            disabled={
-                              loading ||
-                              !webhookUrl ||
-                              (!content &&
-                                !useEmbed &&
-                                !usePoll &&
-                                files.length === 0)
-                            }
-                            className="w-full sm:w-auto"
-                          >
-                            <Play className="size-4" />
-                            Start Spam
-                          </Button>
-                        )
-                      ) : (
-                        <Button
-                          onClick={sendWebhook}
-                          disabled={
-                            loading ||
-                            !webhookUrl ||
-                            (!content &&
-                              !useEmbed &&
-                              !usePoll &&
-                              files.length === 0)
-                          }
-                          className="w-full sm:w-auto"
-                        >
-                          <Send className="size-4" />
-                          {loading ? "Sending..." : "Send Webhook"}
-                        </Button>
-                      )}
-                    </div>
-                  </CardFooter>
-                </Card>
-              </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={mono}
+                      onClick={() => {
+                        setWebhookUrl(webhook.url);
+                        setActiveTab("message");
+                      }}
+                    >
+                      <Check />
+                      Use
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Delete ${webhook.name}`}
+                      onClick={() => deleteWebhook(index)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+        </Section>
+      )}
 
-              <div className="space-y-4">
-                <Card className="h-full">
-                  <CardHeader>
-                    <CardTitle>Preview</CardTitle>
-                    <CardDescription>
-                      How your message will appear in Discord
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-[#36393f] text-white rounded-md p-4 min-h-75">
-                      {username && (
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-600 flex items-center justify-center">
-                            {avatarUrl ? (
-                              <Avatar className="w-8 h-8">
-                                <AvatarImage src={avatarUrl} alt="Avatar" />
-                                <AvatarFallback>
-                                  {username
-                                    ? username.charAt(0).toUpperCase()
-                                    : "D"}
-                                </AvatarFallback>
-                              </Avatar>
-                            ) : (
-                              <span className="text-white text-xs font-bold">
-                                {username.charAt(0).toUpperCase()}
-                              </span>
-                            )}
-                          </div>
-                          <span className="font-semibold">{username}</span>
-                        </div>
-                      )}
-
-                      {content && (
-                        <p className="mb-2 wrap-break-words">{content}</p>
-                      )}
-
-                      {useEmbed && (
-                        <div className="space-y-4">
-                          {embeds.map((embed, index) => (
-                            <EmbedPreview
-                              key={index}
-                              title={embed.title}
-                              description={embed.description}
-                              color={embed.color}
-                              author={embed.author}
-                              authorIcon={embed.authorIcon}
-                              footer={embed.footer}
-                              footerIcon={embed.footerIcon}
-                              thumbnail={embed.thumbnail}
-                              image={embed.image}
-                              fields={embed.fields}
-                              timestamp={embed.timestamp}
-                              url={embed.url}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {usePoll && (
-                        <PollPreview
-                          question={pollQuestion}
-                          answers={pollAnswers}
-                          allowMultiselect={pollAllowMultiselect}
-                          duration={pollDuration}
-                        />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="edit" className="space-y-4 mt-4">
-            <Card className="backdrop-blur-3xl bg-background/10">
-              <CardHeader>
-                <CardTitle>Edit Webhook</CardTitle>
-                <CardDescription>
-                  Modify the webhook&apos;s settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="webhook-url">Webhook URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="webhook-url"
-                      placeholder="https://discord.com/api/webhooks/..."
-                      value={webhookUrl}
-                      onChange={(e) => setWebhookUrl(e.target.value)}
-                      disabled={isSpamming}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Edit Username</Label>
-                    <Input
-                      id="username"
-                      placeholder="Custom Bot Name"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      disabled={isSpamming}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="avatar-url">Avatar URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="avatar-url"
-                        placeholder="https://example.com/avatar.png"
-                        value={avatarUrl}
-                        onChange={(e) => setAvatarUrl(e.target.value)}
-                        disabled={isSpamming}
-                      />
-                      <Avatar>
-                        <AvatarImage src={avatarUrl} alt="Avatar" />
-                        <AvatarFallback>
-                          {username ? username.charAt(0).toUpperCase() : "D"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end">
-                <Button
-                  onClick={editWebhook}
-                  disabled={loading || !webhookUrl || (!username && !avatarUrl)}
-                  className="md:w-min w-full"
-                >
-                  <Save className="size-4" />
-                  {loading ? "Saving..." : "Save Changes"}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="webhooks" className="space-y-4 mt-4">
-            <Card className="backdrop-blur-3xl bg-background/10">
-              <CardHeader>
-                <CardTitle>Saved Webhooks</CardTitle>
-                <CardDescription>
-                  Manage your saved Discord webhooks
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="webhook-name">Webhook Name</Label>
-                    <Input
-                      id="webhook-name"
-                      placeholder="My Server Webhook"
-                      value={webhookName}
-                      onChange={(e) => setWebhookName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="webhook-url-save">Webhook URL</Label>
-                    <Input
-                      id="webhook-url-save"
-                      placeholder="https://discord.com/api/webhooks/..."
-                      value={webhookUrl}
-                      onChange={(e) => setWebhookUrl(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <Button onClick={saveWebhook} className="w-full">
-                  <Save className="size-4" />
-                  Save Webhook
-                </Button>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Your Saved Webhooks</h3>
-                  {savedWebhooks.length === 0 ? (
-                    <p className="text-muted-foreground">
-                      No webhooks saved yet. Add one above.
-                    </p>
-                  ) : (
-                    <ScrollArea className="h-full">
-                      <div className="space-y-2">
-                        {savedWebhooks.map((webhook, index) => (
-                          <Card key={index}>
-                            <CardContent>
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <h4 className="font-medium">
-                                    {webhook.name}
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground truncate max-w-75">
-                                    {webhook.url}
-                                  </p>
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(
-                                        webhook.url,
-                                      );
-                                      toast.info("Copied", {
-                                        description:
-                                          "Webhook URL copied to clipboard",
-                                      });
-                                    }}
-                                  >
-                                    <Copy className="size-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => {
-                                      setWebhookUrl(webhook.url);
-                                      setActiveTab("message");
-                                    }}
-                                  >
-                                    <Check className="size-4" />
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    onClick={() => deleteWebhook(index)}
-                                  >
-                                    <Trash2 />
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-4 mt-4">
-            <WebhookHistory history={history} setHistory={setHistory} />
-          </TabsContent>
-        </Tabs>
-        <footer className="mt-8 text-right flex justify-end gap-2">
-          <Link
-            target="_blank"
-            href="https://discord.com/servers/uncover-it-1298592315694387220"
-            className={buttonVariants({ variant: "outline", size: "icon" })}
-          >
-            <Image
-              src={discord}
-              alt="Discord"
-              className="w-[19px] h-auto dark:brightness-100 brightness-0"
-            />
-          </Link>
-          <Link
-            target="_blank"
-            href="https://github.com/Uncover-it/webhook-multitool"
-            className={buttonVariants({ variant: "outline", size: "icon" })}
-          >
-            <Image
-              src={github}
-              alt="GitHub"
-              className="w-[19px] h-auto dark:brightness-100 brightness-0"
-            />
-          </Link>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() =>
-              theme === "light" ? setTheme("dark") : setTheme("light")
-            }
-            aria-label="theme-toggle"
-          >
-            <Sun className="dark:hidden block" />
-            <MoonStar className="dark:block hidden" />
-          </Button>
-        </footer>
-      </div>
-    </main>
+      {activeTab === "history" && (
+        <WebhookHistory
+          history={history}
+          setHistory={saveHistory}
+          onEdit={startEditing}
+          onDelete={deleteMessage}
+        />
+      )}
+    </div>
   );
 }
